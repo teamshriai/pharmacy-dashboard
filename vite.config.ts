@@ -18,7 +18,7 @@ export default defineConfig({
   plugins: [react()],
   // Relative asset URLs, so the same dist/ works at the domain root or under a
   // sub-path such as /dev/pharmacy/. Routing is hash-based, so no rewrites needed.
-  base: './',
+  base: 'dev/pharmacy',
   build: {
     sourcemap: false,
     // Emit every font as a file rather than inlining small ones as data: URIs,
