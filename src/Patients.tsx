@@ -47,7 +47,7 @@ export function Patients({ store }: { store: Store }) {
             </button>
           ))}
         </div>
-        <label className="ph-find">
+        <label className="ph-finder">
           <Icon name="search" size={14} />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, MRN or IP no." aria-label="Find a patient" />
         </label>

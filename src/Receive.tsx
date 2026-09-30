@@ -151,23 +151,23 @@ export function Receive({ store }: { store: Store }) {
                 const bad = (k: string) => (tried && c.errs.some((e) => e.startsWith(k)) ? 'is-bad' : '');
                 return (
                   <tr key={l.uid} className={tried && c.errs.length ? 'has-err' : ''}>
-                    <td>
+                    <td data-label="Medicine">
                       <select className={`field-input ${bad('Medicine')}`} value={l.productId} onChange={(e) => setLine(i, { productId: e.target.value })} aria-label="Medicine">
                         <option value="">Select</option>
                         {PRODUCTS.map((p) => <option key={p.id} value={p.id}>{productName(p)} {p.form}</option>)}
                       </select>
                     </td>
-                    <td><input className={`field-input mono ${bad('Batch')}`} value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} placeholder="MFG234" aria-label="Batch" /></td>
-                    <td><MonthField value={l.mfg} onChange={(v) => setLine(i, { mfg: v })} label="Manufactured" bad={!!bad('Made date')} /></td>
-                    <td>
+                    <td data-label="Batch"><input className={`field-input mono ${bad('Batch')}`} value={l.batchNo} onChange={(e) => setLine(i, { batchNo: e.target.value })} placeholder="MFG234" aria-label="Batch" /></td>
+                    <td data-label="Made"><MonthField value={l.mfg} onChange={(v) => setLine(i, { mfg: v })} label="Manufactured" bad={!!bad('Made date')} /></td>
+                    <td data-label="Expiry">
                       <MonthField value={l.expiry} onChange={(v) => setLine(i, { expiry: v })} label="Expiry" bad={!!(bad('Expiry') || bad('Already'))} />
                       {c.shortExpiry && <span className="ph-field-warn"><Icon name="clock" size={11} /> Expires within 6 months</span>}
                     </td>
-                    <td><input className={`field-input num ${bad('Qty')}`} type="number" min={0} value={l.qty || ''} onChange={(e) => setLine(i, { qty: num(e.target.value) })} aria-label="Quantity" /></td>
-                    <td><input className="field-input num" type="number" min={0} value={l.free || ''} onChange={(e) => setLine(i, { free: num(e.target.value) })} aria-label="Free quantity" /></td>
-                    <td><input className={`field-input num ${bad('Cost')}`} type="number" min={0} step="0.01" value={l.rate || ''} onChange={(e) => setLine(i, { rate: num(e.target.value) })} aria-label="Purchase rate" /></td>
-                    <td className="num">{l.qty && l.rate ? inr(l.qty * l.rate) : '—'}</td>
-                    <td>
+                    <td data-label="Qty"><input className={`field-input num ${bad('Qty')}`} type="number" min={0} value={l.qty || ''} onChange={(e) => setLine(i, { qty: num(e.target.value) })} aria-label="Quantity" /></td>
+                    <td data-label="Free"><input className="field-input num" type="number" min={0} value={l.free || ''} onChange={(e) => setLine(i, { free: num(e.target.value) })} aria-label="Free quantity" /></td>
+                    <td data-label="Cost each"><input className={`field-input num ${bad('Cost')}`} type="number" min={0} step="0.01" value={l.rate || ''} onChange={(e) => setLine(i, { rate: num(e.target.value) })} aria-label="Purchase rate" /></td>
+                    <td data-label="Amount" className="num">{l.qty && l.rate ? inr(l.qty * l.rate) : '—'}</td>
+                    <td className="ph-grn-x">
                       <button
                         className="ph-x"
                         onClick={() => set({ lines: g.lines.length > 1 ? g.lines.filter((_, j) => j !== i) : [blankLine()] })}

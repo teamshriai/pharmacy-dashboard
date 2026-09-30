@@ -85,35 +85,3 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* ---------- Horizontal strip once the sidebar collapses ---------- */
-@media (max-width: 1040px) {
-  .rail {
-    flex: 1;
-    min-width: 0;
-  }
-  .rail-head {
-    display: none;
-  }
-  .rail-list {
-    flex-direction: row;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-  .rail-item {
-    width: auto;
-    white-space: nowrap;
-    padding: 6px 10px 6px 6px;
-  }
-  .rail-item:not(.rail-item--active) .rail-label {
-    display: none;
-  }
-  .rail-item:not(:disabled):hover {
-    transform: none;
-  }
-  .rail-icon {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-  }}

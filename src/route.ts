@@ -73,4 +73,4 @@ const productTitle = (id: string) => {
   return p ? `${productName(p)} · Stock` : 'Stock';
 };
 export const titleOf = (r: Route) =>
-  `${r.rx ? `Dispense ${r.rx}` : r.section === 'stock' && r.product ? productTitle(r.product) : TITLES[pageOf(r)] ?? 'Pharmacy'} · SHRI-AI Pharmacy`;
+  `${r.rx ? `Dispense ${r.rx}` : r.section === 'stock' && r.product ? productTitle(r.product) : TITLES[pageOf(r)] ?? 'Pharmacy'} · SHRI HEALTH Pharmacy`;

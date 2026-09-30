@@ -30,12 +30,32 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px 14px;
+  padding-left: max(14px, env(safe-area-inset-left));
   border-right: 1px solid var(--glass-border);
   background: var(--nav-fill);
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.side-drawer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.nav-toggle,
+.nav-scrim {
+  display: none;
 }
 
 .brand {
@@ -55,6 +75,14 @@
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+/* The SHRI HEALTH ribbon: a transparent PNG, so no tile behind it. */
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  background: none;
+  object-fit: contain;
 }
 .brand-text {
   display: flex;
@@ -110,7 +138,10 @@
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 20px clamp(18px, 2vw, 28px) 20px;
+  padding-right: max(clamp(18px, 2vw, 28px), env(safe-area-inset-right));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
 
 .top-bar {
@@ -226,74 +257,141 @@
   transform: scale(0.96);
 }
 
-@media (max-width: 1040px) {
+/* ==========================================================================
+   Tablets and phones (below 1024px): the sidebar becomes a slim sticky bar
+   with a menu button, and the navigation slides in from the left.
+   ========================================================================== */
+@media (max-width: 1023.98px) {
   /* minmax(0, …) rather than 1fr: a plain 1fr column cannot shrink below the
-     natural width of the nav strip, which made the whole page wider than a
-     phone screen and clipped its right-hand side. */
+     natural width of its content, which would make the page wider than a phone. */
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
   }
   .side-nav {
-    min-width: 0;
+    --drawer-w: min(300px, 86vw);
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 40;
     height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 12px;
+    display: block;
+    padding: 0;
     border-right: none;
-    border-bottom: 1px solid var(--line);
-    background: var(--glass-fill-strong);
-    backdrop-filter: blur(var(--blur-glass)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(150%);
+    background: none;
+  }
+  .side-head {
+    min-height: var(--topbar-h);
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    background: var(--nav-fill);
     border-bottom: 1px solid var(--glass-hairline);
   }
   .brand {
-    flex-shrink: 0;
     padding: 0;
   }
   .brand-sub {
-    display: none;
+    display: block;
   }
-  .side-foot {
-    margin-top: 0;
-    flex-shrink: 0;
+  .nav-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+    color: var(--ink);
   }
-  .side-note {
-    display: none;
+  .nav-toggle-dot {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 0 2px var(--nav-fill);
   }
+
+  .side-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    width: var(--drawer-w);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 14px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(14px, env(safe-area-inset-left));
+    background: var(--nav-fill);
+    border-right: 1px solid var(--glass-border);
+    box-shadow: 0 0 40px rgba(16, 24, 40, 0.18);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.28s var(--ease), visibility 0s linear 0.28s;
+  }
+  .side-nav.is-open .side-drawer {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.28s var(--ease), visibility 0s;
+  }
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: rgba(8, 12, 20, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s var(--ease);
+  }
+  .side-nav.is-open .nav-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :root.nav-locked,
+  :root.nav-locked body {
+    overflow: hidden;
+  }
+
   .app-stage {
     padding: 14px 12px 24px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
   .top-bar {
-    margin: -14px -12px 14px;
+    margin: -14px calc(-1 * max(12px, env(safe-area-inset-right))) 14px calc(-1 * max(12px, env(safe-area-inset-left)));
     padding: 12px;
-  }}
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
 
-@media (max-width: 620px) {
-  /* Two rows on a phone: brand and actions on top, the tab strip full width
-     beneath it, so the tabs are not squeezed between the two. */
-  .side-nav {
-    flex-wrap: wrap;
-    row-gap: 10px;
-  }
-  .side-nav .rail {
-    order: 3;
-    flex-basis: 100%;
-  }
-  .side-foot {
-    margin-left: auto;
-  }
+@media (max-width: 640px) {
   .top-bar {
     gap: 10px;
-  }}
+  }
+}
 
 :root[data-theme='dark'] .side-nav {
   background: var(--nav-fill);
 }
-@media (max-width: 1040px) {
+@media (max-width: 1023.98px) {
   :root[data-theme='dark'] .side-nav {
-    background: var(--glass-fill-strong);
-  }}
+    background: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-drawer,
+  .nav-scrim {
+    transition: none !important;
+  }
+}

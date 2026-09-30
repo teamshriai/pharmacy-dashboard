@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* ---------------------------------------------------------------- SURFACE
      Day theme: flat, clinical surfaces. White cards on a cool grey page with
      hairline borders; depth comes from borders, not blur or colour blooms.
@@ -78,6 +79,8 @@
   --radius: 12px;
   --radius-md: 10px;
   --radius-sm: 8px;
+  /* Height of the sticky bar that replaces the sidebar below 1024px. */
+  --topbar-h: 64px;
   --radius-chip: 8px;
 
   --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
@@ -488,6 +491,7 @@ select.field-input option {
    a dark-safe variant rather than reused, so contrast holds in both themes.
    ========================================================================== */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --page-from: #0c1220;
   --page-via: #0f1624;
   --page-to: #111827;

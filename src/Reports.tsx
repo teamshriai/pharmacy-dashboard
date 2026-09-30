@@ -3,6 +3,7 @@ import { Icon } from './design/Icon';
 import { LOCATIONS, PRODUCTS, band, inr, productById, productName } from './data';
 import { Empty } from './parts';
 import type { Store } from './store';
+import { saveBlob } from './download';
 
 type Tab = 'sales' | 'gst' | 'stock';
 const TABS: { key: Tab; label: string; icon: 'pill' | 'receipt' | 'layers' }[] = [
@@ -16,12 +17,8 @@ const round = (n: number) => Math.round(n * 100) / 100;
 /** A CSV the accounts team can open in a spreadsheet. */
 function downloadCsv(name: string, rows: (string | number)[][]) {
   const text = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // The byte-order mark tells Excel the file is UTF-8, so ₹ and non-English names survive.
+  saveBlob(new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' }), `${name}-${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 /** Today's reports: what was sold, the tax on it, and what stock is worth. Each one downloads as CSV. */
@@ -96,6 +93,7 @@ export function Reports({ store }: { store: Store }) {
         </div>
 
         {tab === 'sales' && (sales.length === 0 ? <Empty icon="receipt" text="Nothing sold yet today." /> : (
+          <div className="ph-table-wrap">
           <table className="ph-table ph-report-table">
             <thead><tr><th>Medicine</th><th className="num">Qty</th><th className="num">GST</th><th className="num">Amount</th></tr></thead>
             <tbody>
@@ -110,9 +108,11 @@ export function Reports({ store }: { store: Store }) {
             </tbody>
             <tfoot><tr><td>Total</td><td className="num">{sales.reduce((n, s) => n + s.qty, 0)}</td><td className="num">{inr(tax)}</td><td className="num">{inr(total)}</td></tr></tfoot>
           </table>
+          </div>
         ))}
 
         {tab === 'gst' && (gst.length === 0 ? <Empty icon="receipt" text="No sales, so no GST yet." /> : (
+          <div className="ph-table-wrap">
           <table className="ph-table ph-report-table">
             <thead><tr><th>GST rate</th><th className="num">Taxable value</th><th className="num">GST</th><th className="num">Total</th></tr></thead>
             <tbody>
@@ -127,9 +127,11 @@ export function Reports({ store }: { store: Store }) {
             </tbody>
             <tfoot><tr><td>Total</td><td className="num">{inr(round(gst.reduce((n, g) => n + g.taxable, 0)))}</td><td className="num">{inr(tax)}</td><td className="num">{inr(total)}</td></tr></tfoot>
           </table>
+          </div>
         ))}
 
         {tab === 'stock' && (
+          <div className="ph-table-wrap">
           <table className="ph-table ph-report-table">
             <thead><tr><th>Location</th><th className="num">Medicines</th><th className="num">Units</th><th className="num">Not usable</th><th className="num">Value (MRP)</th></tr></thead>
             <tbody>
@@ -153,6 +155,7 @@ export function Reports({ store }: { store: Store }) {
               </tr>
             </tfoot>
           </table>
+          </div>
         )}
       </section>
     </div>

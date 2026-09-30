@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { pageOf, parseHash, titleOf, toHash, type StockLoc } from './route';
 import { sendRequest, units } from './procurement';
 import {
@@ -329,7 +329,9 @@ export function usePharmacyStore() {
   const hash = toHash(route);
   const lastPage = useRef(pageOf(route));
   const rxsRef = useRef(rxs);
-  rxsRef.current = rxs;
+  useLayoutEffect(() => {
+    rxsRef.current = rxs;
+  });
 
   useEffect(() => {
     // The address fully describes the screen, so everything here derives from it.

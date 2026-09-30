@@ -1,12 +1,17 @@
 {
-  "name": "shri-pharmacy-console",
+  "name": "shri-health-pharmacy",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
     "lint": "oxlint",
+    "check": "oxlint && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

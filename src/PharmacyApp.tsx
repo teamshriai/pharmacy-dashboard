@@ -20,6 +20,8 @@ import { Settings } from './Settings';
 import { Status, TypeBadge } from './parts';
 
 const THEME_KEY = 'shri-pharmacy-theme';
+/** The SHRI HEALTH ribbon, served from public/ next to the page (works under any sub-path). */
+const LOGO = `${import.meta.env.BASE_URL}favicon-192.png`;
 
 type NavItem = { key: Section; label: string; icon: Parameters<typeof Icon>[0]['name'] };
 
@@ -67,16 +69,43 @@ const HINT: Record<Section | 'dispense' | 'entry', string> = {
 export default function PharmacyApp() {
   const store = usePharmacyStore();
   const [queueType, setQueueType] = useState<RxType | 'All'>('All');
+  useClockTick(30_000);
+  const [navOpen, setNavOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeNav = () => setNavOpen(false);
+
+  // While the drawer is open: Escape closes it, the page behind does not scroll,
+  // and focus moves into it, returning to the menu button afterwards.
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false);
+    document.addEventListener('keydown', onKey);
+    // Widening the window past the drawer breakpoint turns it back into the sidebar.
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const onWide = () => wide.matches && setNavOpen(false);
+    wide.addEventListener('change', onWide);
+    document.documentElement.classList.add('nav-locked');
+    document.querySelector<HTMLElement>('#side-drawer .rail-item')?.focus();
+    const button = menuButton.current;
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      wide.removeEventListener('change', onWide);
+      document.documentElement.classList.remove('nav-locked');
+      button?.focus();
+    };
+  }, [navOpen]);
   const [dark, setDark] = useState(() => {
     try {
-      return localStorage.getItem(THEME_KEY) === 'dark';
+      return localStorage.getItem(THEME_KEY) !== 'light';
     } catch {
-      return false;
+      return true;
     }
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    // The phone's browser bar follows the console's theme, not the device's.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131b2b' : '#f5f8fc');
     try {
       localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
     } catch {
@@ -94,31 +123,52 @@ export default function PharmacyApp() {
 
   return (
     <div className="app-shell ph-shell">
-      <aside className="side-nav">
-        <div className="brand">
-          <span className="brand-mark"><Icon name="cross" size={15} strokeWidth={2.2} /></span>
-          <span className="brand-text">
-            <span className="brand-name">SHRI-AI</span>
-            <span className="brand-sub">Pharmacy</span>
-          </span>
+      <aside className={`side-nav ${navOpen ? 'is-open' : ''}`}>
+        <div className="side-head">
+          <div className="brand">
+            <img className="brand-mark brand-logo" src={LOGO} alt="" width={36} height={36} />
+            <span className="brand-text">
+              <span className="brand-name">SHRI HEALTH</span>
+              <span className="brand-sub">Pharmacy</span>
+            </span>
+          </div>
+          <button
+            ref={menuButton}
+            className="nav-toggle"
+            onClick={() => setNavOpen((o) => !o)}
+            aria-expanded={navOpen}
+            aria-controls="side-drawer"
+            aria-label={navOpen ? 'Close menu' : 'Open menu'}
+          >
+            <Icon name={navOpen ? 'close' : 'menu'} size={18} />
+            {!navOpen && counts.queue ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
+          </button>
         </div>
 
-        <nav className="rail" aria-label="Pharmacy">
-          {NAV_GROUPS.map((g) => (
-            <div key={g.head} className="rail-group">
-              <p className="rail-head">{g.head}</p>
-              <ol className="rail-list">
-                {g.items.map((n) => <li key={n.key}><NavButton item={n} store={store} count={counts[n.key]} /></li>)}
-              </ol>
-            </div>
-          ))}
-        </nav>
+        {/* On tablets and phones this is a slide-in drawer; on wider screens it is the sidebar. */}
+        <div className="nav-scrim" onClick={closeNav} aria-hidden="true" />
+        <div
+          id="side-drawer"
+          className="side-drawer"
+          onClick={(e) => (e.target as HTMLElement).closest('.rail-item') && closeNav()}
+        >
+          <nav className="rail" aria-label="Pharmacy">
+            {NAV_GROUPS.map((g) => (
+              <div key={g.head} className="rail-group">
+                <p className="rail-head">{g.head}</p>
+                <ol className="rail-list">
+                  {g.items.map((n) => <li key={n.key}><NavButton item={n} store={store} count={counts[n.key]} /></li>)}
+                </ol>
+              </div>
+            ))}
+          </nav>
 
-        <div className="side-foot">
-          <NavButton item={SETTINGS} store={store} />
-          <div className="side-note">
-            <span className="side-dot" />
-            Sample data
+          <div className="side-foot">
+            <NavButton item={SETTINGS} store={store} />
+            <div className="side-note">
+              <span className="side-dot" />
+              Sample data
+            </div>
           </div>
         </div>
       </aside>
@@ -188,6 +238,15 @@ export default function PharmacyApp() {
 }
 
 const TOAST_MS = 5000;
+
+/** Re-renders every `ms` so waiting times and "over target" flags stay current while nobody clicks. */
+function useClockTick(ms: number) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), ms);
+    return () => clearInterval(timer);
+  }, [ms]);
+}
 
 /** The pop-up intimation (e.g. "Order placed"): bottom right, closes by itself, or with ×. */
 function Toast({ store }: { store: Store }) {

@@ -1,4 +1,5 @@
 import { DISPENSE_FROM, accountOf, hhmm, monYr, placeOf, productById, productName, type Bill } from './data';
+import { saveBlob } from './download';
 
 /*
  * The bill as a downloadable A4 PDF, written by hand so the console needs no
@@ -74,7 +75,7 @@ export function billPdf(bill: Bill): Blob {
 
   // ---- header band ----
   pg.rect(0, PAGE_H - 96, PAGE_W, 96, BRAND);
-  pg.text('SHRI-AI Hospital Pharmacy', M, PAGE_H - 46, 18, { bold: true, color: [1, 1, 1] });
+  pg.text('SHRI HEALTH Hospital Pharmacy', M, PAGE_H - 46, 18, { bold: true, color: [1, 1, 1] });
   pg.text(`${DISPENSE_FROM} - Pharmacy bill (tax invoice)`, M, PAGE_H - 66, 10, { color: [0.85, 0.9, 0.97] });
   pg.text('BILL', PAGE_W - M, PAGE_H - 46, 18, { bold: true, color: [1, 1, 1], align: 'right' });
   pg.text(bill.no, PAGE_W - M, PAGE_H - 66, 10, { color: [0.85, 0.9, 0.97], align: 'right' });
@@ -219,12 +220,5 @@ function assemble(pages: Page[]): string {
 }
 
 export function downloadBill(bill: Bill) {
-  const url = URL.createObjectURL(billPdf(bill));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${bill.no}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(billPdf(bill), `${bill.no}.pdf`);
 }

@@ -6,13 +6,14 @@
  * (Pharmacy), who asked, whether it is urgent, and each item with its quantity.
  * Vendor, price and delivery date are procurement's to fill in.
  *
- * Calls go to /procurement-api, which the console's own server forwards to the
- * Procurement Centre (see vite.config.ts), so the browser never calls another
- * origin directly.
+ * Calls go to procurement-api (relative to the page, so it also works under a
+ * sub-path such as /dev/pharmacy/), which the console's own server forwards to
+ * the Procurement Centre (vite.config.ts in development, NGINX in production),
+ * so the browser never calls another origin directly.
  */
 import { productById, productName } from './data';
 
-const API = '/procurement-api';
+const API = 'procurement-api';
 
 /**
  * This pharmacy's medicines in the procurement catalogue, by SKU, with how many
@@ -65,11 +66,16 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
     throw new Error('Procurement Centre could not be reached');
   }
   let data: unknown = null;
-  try {
-    data = await res.json();
-  } catch {
-    /* no body */
+  // A server with no procurement route may answer with the console's own HTML page.
+  const isJson = (res.headers.get('content-type') ?? '').includes('application/json');
+  if (isJson) {
+    try {
+      data = await res.json();
+    } catch {
+      /* malformed body */
+    }
   }
+  if (res.ok && data === null) throw new Error('Procurement Centre could not be reached');
   if (!res.ok) {
     const msg = (data as { error?: string } | null)?.error;
     throw new Error(msg || (res.status >= 500 || res.status === 404 ? 'Procurement Centre could not be reached' : `Procurement refused the request (${res.status})`));

@@ -71,15 +71,6 @@ function SampleQr({ seed }: { seed: string }) {
     return out;
   }, [seed]);
 
-  // Corner mark: dark 7×7, white 5×5, dark 3×3.
-  const Finder = ({ x, y }: { x: number; y: number }) => (
-    <>
-      <rect x={x} y={y} width={7} height={7} fill="currentColor" />
-      <rect x={x + 1} y={y + 1} width={5} height={5} fill="#fff" />
-      <rect x={x + 2} y={y + 2} width={3} height={3} fill="currentColor" />
-    </>
-  );
-
   return (
     <svg className="ph-qr" viewBox={`-1 -1 ${N + 2} ${N + 2}`} role="img" aria-label="Sample payment QR code">
       <rect x={-1} y={-1} width={N + 2} height={N + 2} rx={2} fill="#fff" />
@@ -90,5 +81,16 @@ function SampleQr({ seed }: { seed: string }) {
       <Finder x={N - 7} y={0} />
       <Finder x={0} y={N - 7} />
     </svg>
+  );
+}
+
+/** QR corner mark: dark 7×7, white 5×5, dark 3×3. */
+function Finder({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <rect x={x} y={y} width={7} height={7} fill="currentColor" />
+      <rect x={x + 1} y={y + 1} width={5} height={5} fill="#fff" />
+      <rect x={x + 2} y={y + 2} width={3} height={3} fill="currentColor" />
+    </>
   );
 }

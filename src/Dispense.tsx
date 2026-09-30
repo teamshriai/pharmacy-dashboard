@@ -262,6 +262,7 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                             <button className="btn-text" onClick={() => setPicks((c) => ({ ...c, [p.id]: auto[p.id] }))}>Use earliest expiry</button>
                           )}
                         </div>
+                        <div className="ph-table-wrap">
                         <table className="ph-table ph-batch-table">
                           <thead>
                             <tr><th>#</th><th>Batch</th><th>Expiry</th><th className="num">Available</th><th className="num">Pick</th></tr>
@@ -296,6 +297,7 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                             })}
                           </tbody>
                         </table>
+                        </div>
                         {got < l.qty && (
                           <p className="ph-short">
                             <Icon name="alert" size={13} /> Only {got} in stock. Giving {got} now, {l.qty - got} later.

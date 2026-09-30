@@ -17,8 +17,8 @@ export function TransactionReceipt({ bill, notes, actions }: { bill: Bill; notes
   const paid = bill.status === 'Paid';
   const p = bill.patient;
   const facts: [string, ReactNode][] = [
-    ['Transaction ID', <span className="mono">{bill.txnId}</span>],
-    ['Bill no.', <span className="mono">{bill.no}</span>],
+    ['Transaction ID', <span key="txn" className="mono">{bill.txnId}</span>],
+    ['Bill no.', <span key="no" className="mono">{bill.no}</span>],
     ['Date & time', when(bill.at)],
     ['Payment method', methodOf(bill)],
     ['Patient', <>{p.name} <span className="ph-muted mono">{p.mrn}</span></>],
