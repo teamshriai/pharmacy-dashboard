@@ -1,0 +1,577 @@
+:root {
+  /* ---------------------------------------------------------------- SURFACE
+     Day theme: flat, clinical surfaces. White cards on a cool grey page with
+     hairline borders; depth comes from borders, not blur or colour blooms.
+     Brand, clinical and AI palettes stay separate and never borrow from one
+     another. */
+  --page-from: #e6edf6;
+  --page-via: #ecf0f6;
+  --page-to: #eff1f6;
+  /* Two faint colour washes behind everything: brand blue top right, teal bottom left. */
+  --bloom-a: rgb(27 77 143 / 0.08);
+  --bloom-b: rgb(13 148 136 / 0.06);
+  --bloom-c: transparent;
+  --bloom-d: transparent;
+
+  --glass-fill: #ffffff;
+  --glass-fill-strong: #ffffff;
+  --glass-fill-muted: #f4f7fb;
+  --glass-fill-hover: #edf2f8;
+  --glass-border: #dde4ee;
+  --glass-hairline: #e6ebf2;
+  --glass-inset: #e9eef6;
+  /* Soft tint at the top of every card, and the navigation surfaces. */
+  --card-tint: #f2f6fc;
+  --nav-fill: #f5f8fc;
+  --blur-glass: 0px;
+  --blur-glass-lg: 0px;
+
+  /* Surface aliases used throughout this app */
+  --sand: var(--page-to);
+  --sand-2: var(--glass-fill-muted);
+  --sand-3: #e4e8ee;
+  --paper: var(--glass-fill-strong);
+
+  /* ------------------------------------------------------------------ BRAND
+     Indostates blue. Navigation, primary actions and identity only —
+     never for clinical status. */
+  --butter: #1b4d8f;
+  --butter-soft: #ebf2fa;
+  --butter-deep: #143b6e;
+  --brand-on: #ffffff;
+
+  --clay: #6b7280;
+
+  /* -------------------------------------------------------------------- INK */
+  --ink: #101828;
+  --ink-2: #3b4658;
+  --ink-3: #5d6778;
+  --line: #e9edf2;
+  --line-2: #d3d9e2;
+
+  /* --------------------------------------------------------------- CLINICAL
+     Closed set. Never glass, never tint-only: always paired with icon + label. */
+  --ok: #137547;
+  --ok-soft: #e3f3ea;
+  --warn: #b45309;
+  --warn-soft: #fdf0e1;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+
+  /* ---------------------------------------------------------------------- AI
+     Reserved. Indigo appears nowhere in the clinical table, by design. */
+  --ai: #4f46e5;
+
+  --tone-blue: #2563eb;
+  --tone-teal: #0d9488;
+  --tone-violet: #7c3aed;
+  --tone-rose: #e11d48;
+  --tone-amber: #d97706;
+  --tone-green: #16a34a;
+  --tone-sky: #0284c7;
+  --tone-fuchsia: #c026d3;
+  --tone-orange: #ea580c;
+  /* Used on the logo and the progress bar. */
+  --vivid: linear-gradient(135deg, var(--butter), #2c6cb5);
+
+  /* ------------------------------------------------------------------ SHAPE */
+  --radius: 12px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  --radius-chip: 8px;
+
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow: 0 1px 3px rgb(16 24 40 / 0.06), 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-lift: 0 10px 28px rgb(16 24 40 / 0.10), 0 2px 6px rgb(16 24 40 / 0.05);
+  --ring: 0 0 0 3px rgb(27 77 143 / 0.18);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font: 'Plus Jakarta Sans Variable', 'Noto Sans Kannada Variable', 'Noto Sans Devanagari Variable',
+    'Noto Sans Tamil Variable', 'Noto Sans Malayalam Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', 'Noto Sans Kannada Variable', 'Noto Sans Devanagari Variable',
+    'Noto Sans Tamil Variable', 'Noto Sans Malayalam Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+::selection {
+  background: var(--butter);
+  color: var(--brand-on);
+}
+
+/* ---------- Hidden but functional scrollbars ---------- */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--page-to);
+  font-family: var(--font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--ink);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--butter);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tabular figures for any column of numbers. */
+:where(table, input[type='number']) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.step-title {
+  font-size: 26px;
+  line-height: 1.18;
+  letter-spacing: -0.028em;
+}
+
+.step-sub {
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 9px 0 22px;
+  max-width: 62ch;
+}
+.tone-teal { --card-tone: var(--tone-teal); }
+.tone-violet { --card-tone: var(--tone-violet); }
+.tone-rose { --card-tone: var(--tone-rose); }
+.tone-amber { --card-tone: var(--tone-amber); }
+.tone-green { --card-tone: var(--tone-green); }
+.tone-sky { --card-tone: var(--tone-sky); }
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: transform 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease),
+    border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), opacity 0.2s var(--ease);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Action rows sit at the foot of a card; the icon slot keeps label and glyph aligned. */
+.btn-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-ico {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+}
+.btn-ico--end {
+  margin: 0 0 0 8px;
+  transition: transform 0.2s var(--ease);
+}
+.btn:hover:not(:disabled) .btn-ico--end {
+  transform: translateX(2px);
+}
+
+.btn-primary {
+  background: var(--butter);
+  color: var(--brand-on);
+  box-shadow: var(--shadow-xs);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--butter-deep);
+  box-shadow: 0 4px 12px rgb(27 77 143 / 0.22);
+}
+.btn-primary:disabled {
+  background: var(--sand-3);
+  color: var(--ink-3);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: var(--glass-fill);
+  color: var(--ink);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--glass-fill-hover);
+  border-color: color-mix(in srgb, var(--butter) 45%, var(--line-2));
+  color: var(--butter);
+}
+
+.btn-text {
+  background: transparent;
+  border: none;
+  color: var(--butter);
+  font-weight: 600;
+  padding: 7px 2px;
+  font-size: 13.5px;
+  transition: color 0.2s var(--ease);
+}
+.btn-text:hover {
+  color: var(--butter-deep);
+}
+.btn-text::after {
+  content: '';
+  display: block;
+  height: 1.5px;
+  width: 0;
+  background: var(--butter-deep);
+  border-radius: 2px;
+  transition: width 0.26s var(--ease);
+}
+.btn-text:hover::after {
+  width: 100%;
+}
+
+/* ==========================================================================
+   Fields
+   ========================================================================== */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-label {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  font-weight: 500;
+  transition: color 0.2s var(--ease);
+}
+.field:hover .field-label {
+  color: var(--ink);
+}
+.field-input {
+  min-height: 40px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  font-size: 14px;
+  color: var(--ink);
+  background: #ffffff;
+  width: 100%;
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s var(--ease);
+}
+.field-input::placeholder {
+  color: var(--ink-3);
+}
+.field-input:hover:not(:disabled):not([readonly]) {
+  border-color: #98a2b3;
+}
+.field-input:focus {
+  outline: none;
+  border-color: var(--butter);
+  box-shadow: var(--ring);
+}
+textarea.field-input {
+  min-height: 88px;
+  padding: 12px 14px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+select.field-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23797166' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 16px;
+  padding-right: 42px;
+  cursor: pointer;
+}
+select.field-input option {
+  background: var(--paper);
+  color: var(--ink);
+}
+.field-required {
+  color: var(--danger);
+  margin-left: 3px;
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+.card {
+  position: relative;
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 30px 32px;
+  display: flex;
+  flex-direction: column;
+}
+/* direct-child controls keep their natural width inside the flex card */
+.card > .btn,
+.card > .btn-text {
+  align-self: flex-start;
+}
+@media (max-width: 640px) {
+  .card {
+    padding: 22px 18px;
+  }
+  .step-title {
+    font-size: 22px;
+  }
+  .btn-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-row .btn {
+    width: 100%;
+  }
+  .btn-row .btn-primary {
+    order: -1;
+  }
+  .btn-row > span {
+    text-align: center;
+  }}
+
+.alert {
+  padding: 13px 15px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.alert-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.pill {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--paper);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: all 0.2s var(--ease);
+}
+@keyframes tick-pop {
+  0% { transform: scale(0.7); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Entrance animations
+   ========================================================================== */
+@keyframes fade-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.step-enter {
+  animation: fade-slide-in 0.28s var(--ease);
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Completion
+   ========================================================================== */
+.success-ring {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--ok);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  animation: pop-in 0.5s var(--ease), ring-pulse 2s var(--ease) 0.5s 2;
+  transition: transform 0.3s var(--ease);
+}
+.success-ring:hover {
+  transform: scale(1.05);
+}
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(19 117 71 / 0.45); }
+  60% { box-shadow: 0 0 0 20px rgb(19 117 71 / 0); }
+}
+.success-tick {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: draw-tick 0.55s var(--ease) 0.3s forwards;
+}
+@keyframes draw-tick {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+*::before,
+*::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }}
+
+/* ==========================================================================
+   NIGHT THEME — ported from the source theme. Every clinical hex is lifted to
+   a dark-safe variant rather than reused, so contrast holds in both themes.
+   ========================================================================== */
+:root[data-theme='dark'] {
+  --page-from: #0c1220;
+  --page-via: #0f1624;
+  --page-to: #111827;
+  --bloom-a: rgb(124 176 236 / 0.07);
+  --bloom-b: rgb(45 212 191 / 0.045);
+  --card-tint: rgb(124 176 236 / 0.055);
+  --nav-fill: #131b2b;
+
+  --glass-fill: #161e2e;
+  --glass-fill-strong: #161e2e;
+  --glass-fill-muted: rgb(255 255 255 / 0.04);
+  --glass-fill-hover: rgb(255 255 255 / 0.06);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-hairline: rgb(255 255 255 / 0.08);
+  --glass-inset: rgb(0 0 0 / 0.20);
+
+  --sand-3: rgb(255 255 255 / 0.10);
+
+  --ink: #eef1f7;
+  --ink-2: #c4cad8;
+  --ink-3: #9aa3b6;
+  --line: rgb(255 255 255 / 0.08);
+  --line-2: rgb(255 255 255 / 0.16);
+  --clay: #8b94a8;
+
+  --butter: #7cb0ec;
+  --butter-soft: rgb(124 176 236 / 0.16);
+  --butter-deep: #a8ccf4;
+  --brand-on: #0d1220;
+
+  --ok: #34d399;
+  --ok-soft: rgb(52 211 153 / 0.16);
+  --warn: #fbbf24;
+  --warn-soft: rgb(251 191 36 / 0.16);
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.16);
+
+  --ai: #a5b4fc;
+
+  --tone-blue: #60a5fa;
+  --tone-teal: #2dd4bf;
+  --tone-violet: #a78bfa;
+  --tone-rose: #fb7185;
+  --tone-amber: #fbbf24;
+  --tone-green: #4ade80;
+  --tone-sky: #38bdf8;
+  --tone-fuchsia: #e879f9;
+  --tone-orange: #fb923c;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.30);
+  --shadow: 0 8px 32px rgb(0 0 0 / 0.40), 0 1px 2px rgb(0 0 0 / 0.30);
+  --shadow-lift: 0 18px 54px rgb(0 0 0 / 0.52), 0 2px 6px rgb(0 0 0 / 0.34);
+  --ring: 0 0 0 3px rgb(124 176 236 / 0.28);
+}
+
+:root[data-theme='dark'] .field-input {
+  background: rgb(255 255 255 / 0.05);
+}
+:root[data-theme='dark'] .field-input:hover:not(:disabled):not([readonly]) {
+  background: rgb(255 255 255 / 0.08);
+  border-color: var(--clay);
+}
+:root[data-theme='dark'] .field-input:focus {
+  background: rgb(255 255 255 / 0.10);
+}
+:root[data-theme='dark'] .success-ring {
+  color: #0d1220;
+}
+@keyframes ring-pulse-dark {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.45); }
+  60% { box-shadow: 0 0 0 20px rgb(52 211 153 / 0); }
+}
+:root[data-theme='dark'] .success-ring {
+  animation: pop-in 0.5s var(--ease), ring-pulse-dark 2s var(--ease) 0.5s 2;
+}
+
+/* Opaque fallback where backdrop-filter is unavailable, so text never lands on
+   the raw page gradient. */
+@supports not (backdrop-filter: blur(1px)) {
+  .card,
+.btn-secondary {
+    background-color: color-mix(in srgb, var(--page-from) 75%, white);
+  }
+  :root[data-theme='dark'] .card,
+:root[data-theme='dark'] .btn-secondary {
+    background-color: color-mix(in srgb, var(--page-to) 80%, black);
+  }}
