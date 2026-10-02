@@ -1,9 +1,0 @@
-/* Latin UI face, plus Noto companions so names and addresses written in
-   Kannada, Hindi/Marathi, Tamil or Malayalam render in a matching style
-   instead of falling back to whatever the device happens to have. */
-@import '@fontsource-variable/plus-jakarta-sans';
-@import '@fontsource-variable/noto-sans-kannada';
-@import '@fontsource-variable/noto-sans-devanagari';
-@import '@fontsource-variable/noto-sans-tamil';
-@import '@fontsource-variable/noto-sans-malayalam';
-@import './theme.css';
