@@ -75,13 +75,13 @@ export function Billing({ store }: { store: Store }) {
                       tabIndex={0}
                       onKeyDown={(e) => e.key === 'Enter' && store.setFocusBill(b.no)}
                     >
-                      <td>
+                      <td data-label="Bill">
                         <span className="ph-bill-no">
                           <strong className="mono">{b.txnId}</strong>
                           <span>{hhmm(b.at)} · {b.no}</span>
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Patient">
                         <span className="ph-patient-cell">
                           <Avatar name={b.patient.name} type={TYPE_FOR[b.patient.encounter]} />
                           <span>
@@ -90,14 +90,14 @@ export function Billing({ store }: { store: Store }) {
                           </span>
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Paid by">
                         <span className={`ph-status ${b.status === 'Paid' ? 'ph-status--ok' : 'ph-status--info'}`}>
                           <Icon name={b.status === 'Paid' ? 'checkCircle' : 'hospital'} size={12} />
                           {b.status === 'Paid' ? b.payment : 'Account'}
                         </span>
                       </td>
-                      <td className="num"><strong>{inr(b.total)}</strong></td>
-                      <td>
+                      <td data-label="Amount" className="num"><strong>{inr(b.total)}</strong></td>
+                      <td data-label="" className="ph-cell-act">
                         <button
                           className="ph-icon-btn"
                           onClick={(e) => { e.stopPropagation(); downloadBill(b); }}

@@ -273,11 +273,11 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                               const pick = picks[p.id]?.find((x) => x.batchId === bt.id)?.qty ?? 0;
                               return (
                                 <tr key={bt.id} className={`${ok ? '' : 'is-off'} ${pick ? 'is-picked' : ''}`}>
-                                  <td>{ok ? <span className="ph-order">{fefoOrder.indexOf(bt.id) + 1}</span> : <Icon name="ban" size={13} />}</td>
-                                  <td className="mono">{bt.batchNo}</td>
-                                  <td><Expiry batch={bt} /></td>
-                                  <td className="num">{bt.qty}</td>
-                                  <td className="num">
+                                  <td data-label="#">{ok ? <span className="ph-order">{fefoOrder.indexOf(bt.id) + 1}</span> : <Icon name="ban" size={13} />}</td>
+                                  <td data-label="Batch" className="mono">{bt.batchNo}</td>
+                                  <td data-label="Expiry"><Expiry batch={bt} /></td>
+                                  <td data-label="Available" className="num">{bt.qty}</td>
+                                  <td data-label="Pick" className="num">
                                     {ok ? (
                                       <input
                                         className="ph-pick"

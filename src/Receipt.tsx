@@ -59,10 +59,10 @@ export function TransactionReceipt({ bill, notes, actions }: { bill: Bill; notes
           <tbody>
             {bill.lines.map((l, i) => (
               <tr key={i}>
-                <td>{productName(productById(l.productId))}</td>
-                <td className="mono">{l.batchNo}</td>
-                <td className="num">{l.qty}</td>
-                <td className="num">{inr(l.amount)}</td>
+                <td data-label="Medicine">{productName(productById(l.productId))}</td>
+                <td data-label="Batch" className="mono">{l.batchNo}</td>
+                <td data-label="Qty" className="num">{l.qty}</td>
+                <td data-label="Amount" className="num">{inr(l.amount)}</td>
               </tr>
             ))}
           </tbody>

@@ -84,9 +84,9 @@ src/
   parts.tsx         shared badges, chips, gauges
   download.ts       saves generated PDFs and CSVs (works on iOS Safari)
   pharmacy.css      console styles
-  design/           the SHRI HEALTH design system: theme, layout shell, nav,
-                    icons, fonts. Shared look with the patient registration app,
-                    copied here so this project stands alone.
+  design/           theme tokens, layout shell, nav, icons (lucide), fonts.
+                    Follows the SHRI HEALTH Portal Design System in
+                    DESIGN_SYSTEM.md (colours, type, radius, shadows, motion).
 public/
   favicon-192.png   SHRI HEALTH logo: sidebar logo, favicon, and source of
                     favicon-32.png and apple-touch-icon.png (white background for iOS)

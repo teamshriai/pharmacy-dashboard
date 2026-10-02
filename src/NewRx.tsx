@@ -451,13 +451,13 @@ export function NewRx({ store }: { store: Store }) {
                   const short = counterStock(p.id) < l.qty;
                   return (
                     <tr key={l.uid}>
-                      <td>{i + 1}</td>
-                      <td><strong>{productName(p)}</strong> <span className="ph-muted">{p.form}</span></td>
-                      <td>{l.dose}</td>
-                      <td>{l.freq}</td>
-                      <td>{l.freq === 'STAT' ? '—' : l.freq === 'SOS' ? 'As needed' : `${l.days} d`}</td>
-                      <td className="num">{l.qty}</td>
-                      <td>
+                      <td data-label="#">{i + 1}</td>
+                      <td data-label="Medicine"><strong>{productName(p)}</strong> <span className="ph-muted">{p.form}</span></td>
+                      <td data-label="Dose">{l.dose}</td>
+                      <td data-label="Frequency">{l.freq}</td>
+                      <td data-label="Duration">{l.freq === 'STAT' ? '—' : l.freq === 'SOS' ? 'As needed' : `${l.days} d`}</td>
+                      <td data-label="Qty" className="num">{l.qty}</td>
+                      <td data-label="Check">
                         {conflict ? (
                           <span className="ph-status ph-status--danger"><Icon name="ban" size={12} />Allergy</span>
                         ) : short ? (

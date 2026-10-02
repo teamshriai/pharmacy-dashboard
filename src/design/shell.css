@@ -4,23 +4,19 @@
   min-height: 100%;
   display: grid;
   grid-template-columns: clamp(232px, 16vw, 272px) minmax(0, 1fr);
-  background-color: var(--page-to);
+  background-color: var(--bg);
   overflow-x: clip;
 }
 
-/* The page backdrop: a soft top-to-bottom tone with two faint colour washes,
-   fixed so it never scrolls. */
+/* The page ground: one calm blue-grey, no gradient (DS §1). Fixed so it never scrolls. */
 .app-shell::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(900px 520px at 90% -10%, var(--bloom-a), transparent 70%),
-    radial-gradient(760px 520px at -5% 105%, var(--bloom-b), transparent 70%),
-    linear-gradient(180deg, var(--page-from), var(--page-to));
-  transition: background 200ms var(--ease);
+  background: var(--bg);
+  transition: background-color 0.2s var(--ease-smooth);
 }
 
 /* ==========================================================================
@@ -36,8 +32,8 @@
   gap: 20px;
   padding: 20px 14px;
   padding-left: max(14px, env(safe-area-inset-left));
-  border-right: 1px solid var(--glass-border);
-  background: var(--nav-fill);
+  border-right: 1px solid var(--border-soft);
+  background: var(--surface-1);
 }
 
 .side-head {
@@ -67,8 +63,8 @@
 .brand-mark {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
-  background: var(--vivid);
+  border-radius: 10px;
+  background: var(--brand-fill);
   color: #fff;
   display: flex;
   align-items: center;
@@ -76,10 +72,10 @@
   flex-shrink: 0;
   transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
-/* The SHRI HEALTH ribbon: a transparent PNG, so no tile behind it. */
+/* The SHRI HEALTH ribbon (DS BrandMark): a transparent mark, no tile behind it. */
 .brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 0;
   background: none;
   object-fit: contain;
@@ -89,17 +85,21 @@
   flex-direction: column;
   min-width: 0;
 }
+/* Wordmark: 15px bold uppercase, wide tracking (DS §3.2). */
 .brand-name {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink);
-  line-height: 1.15;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .brand-sub {
-  font-size: 11px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--ink-subtle);
   white-space: nowrap;
 }
 
@@ -113,21 +113,17 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 0 13px;
-  font-size: 11.5px;
-  color: var(--ink-3);
+  padding: 0 12px;
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
 }
+/* A still status dot: nothing in the app loops (DS §11.3). */
 .side-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ok);
+  background: var(--success-fg);
   flex-shrink: 0;
-  animation: live-pulse 2.4s ease-in-out infinite;
-}
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
 }
 
 /* ==========================================================================
@@ -151,26 +147,34 @@
   gap: 16px;
   flex-wrap: wrap;
   margin: -20px calc(-1 * clamp(18px, 2vw, 28px)) 20px;
-  padding: 14px clamp(18px, 2vw, 28px);
-  border-bottom: 1px solid var(--glass-border);
-  background: var(--nav-fill);
+  padding: 12px clamp(18px, 2vw, 28px);
+  border-bottom: 1px solid var(--border-soft);
+  /* DS header: surface at 95% with a light blur. */
+  background: color-mix(in srgb, var(--surface-1) 95%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .top-title {
   min-width: 0;
 }
+/* Page title, compact staff portal (DS §3.4): 20px, 24px from 640px. */
 .top-hint {
-  margin: 3px 0 0;
-  font-size: 12.5px;
-  color: var(--ink-3);
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
 }
 .top-heading {
   font-family: var(--font-display);
-  /* Shrinks a little on narrow stages so the longer first-step greeting stays on one line. */
-  font-size: clamp(18px, 1.4vw, 21px);
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.028em;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   text-wrap: balance;
+}
+@media (min-width: 640px) {
+  .top-heading {
+    font-size: var(--text-2xl);
+  }
 }
 
 .top-actions {
@@ -180,21 +184,23 @@
   flex-wrap: wrap;
 }
 
+/* Account chip (DS §8.6): no frame, a round initials avatar, the name beside it. */
 .user-chip {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: var(--glass-fill);
-  border: 1px solid var(--glass-border);
+  gap: 8px;
+  min-height: var(--tap-min);
+  background: transparent;
+  border: 0;
   border-radius: var(--radius-md);
-  padding: 5px 12px 5px 5px;
+  padding: 6px 8px;
 }
 .user-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 7px;
-  background: var(--butter-soft);
-  color: var(--butter);
+  border-radius: 50%;
+  background: var(--primary-50);
+  color: var(--primary-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,15 +212,15 @@
   min-width: 0;
 }
 .user-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: 500;
   color: var(--ink);
   line-height: 1.2;
   white-space: nowrap;
 }
 .user-role {
-  font-size: 11px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
   white-space: nowrap;
 }
 
@@ -233,28 +239,72 @@
   flex: 0 0 auto;
 }
 
-/* ---- Day / night toggle ---- */
+/* ---- Day / night switch (DS §6.3): a 56×32 track inside a 44px target ---- */
 .theme-toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-fill);
-  color: var(--ink-2);
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   flex-shrink: 0;
-  transition: transform 0.3s var(--ease), box-shadow 0.25s var(--ease), color 0.25s var(--ease),
-    border-color 0.25s var(--ease), background 0.25s var(--ease);
+  transition: border-color 0.2s var(--ease-premium), background-color 0.2s var(--ease-premium);
 }
 .theme-toggle:hover {
-  color: var(--ink);
-  border-color: var(--butter);
-  background: var(--butter-soft);
+  border-color: var(--border-strong);
 }
-.theme-toggle:active {
-  transform: scale(0.96);
+.theme-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 56px;
+  height: 32px;
+  margin: 4px;
+  border-radius: 999px;
+}
+.theme-knob {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-card);
+  color: var(--warning-fg);
+  transform: translateX(4px);
+  transition: transform 0.2s ease-out;
+}
+.theme-toggle[aria-checked='true'] .theme-knob {
+  color: var(--primary-500);
+  transform: translateX(28px);
+}
+.theme-ghost {
+  position: absolute;
+  display: inline-flex;
+  color: var(--ink-subtle);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-premium);
+}
+.theme-ghost--sun {
+  left: 6px;
+}
+.theme-ghost--moon {
+  right: 6px;
+  opacity: 0.4;
+}
+.theme-toggle[aria-checked='true'] .theme-ghost--sun {
+  opacity: 0.4;
+}
+.theme-toggle[aria-checked='true'] .theme-ghost--moon {
+  opacity: 0;
 }
 
 /* ==========================================================================
@@ -284,8 +334,10 @@
     padding-top: max(10px, env(safe-area-inset-top));
     padding-left: max(12px, env(safe-area-inset-left));
     padding-right: max(12px, env(safe-area-inset-right));
-    background: var(--nav-fill);
-    border-bottom: 1px solid var(--glass-hairline);
+    background: color-mix(in srgb, var(--surface-1) 95%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-soft);
   }
   .brand {
     padding: 0;
@@ -298,12 +350,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--glass-border);
-    background: var(--glass-fill);
-    color: var(--ink);
+    width: var(--tap-min);
+    height: var(--tap-min);
+    border-radius: var(--radius-md);
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted);
+    transition: background-color 0.15s var(--ease-premium);
+  }
+  .nav-toggle:hover {
+    background: var(--surface-2);
   }
   .nav-toggle-dot {
     position: absolute;
@@ -312,8 +368,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--danger);
-    box-shadow: 0 0 0 2px var(--nav-fill);
+    background: var(--emergency-fill);
+    box-shadow: 0 0 0 2px var(--surface-1);
   }
 
   .side-drawer {
@@ -329,27 +385,28 @@
     padding-top: max(20px, env(safe-area-inset-top));
     padding-bottom: max(20px, env(safe-area-inset-bottom));
     padding-left: max(14px, env(safe-area-inset-left));
-    background: var(--nav-fill);
-    border-right: 1px solid var(--glass-border);
-    box-shadow: 0 0 40px rgba(16, 24, 40, 0.18);
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-card-lg);
     transform: translateX(-100%);
     visibility: hidden;
-    transition: transform 0.28s var(--ease), visibility 0s linear 0.28s;
+    /* DS §8.5: x −100% → 0 over 0.2s on the premium curve. */
+    transition: transform 0.2s var(--ease-premium), visibility 0s linear 0.2s;
   }
   .side-nav.is-open .side-drawer {
     transform: none;
     visibility: visible;
-    transition: transform 0.28s var(--ease), visibility 0s;
+    transition: transform 0.2s var(--ease-premium), visibility 0s;
   }
   .nav-scrim {
     display: block;
     position: fixed;
     inset: 0;
     z-index: 1;
-    background: rgba(8, 12, 20, 0.45);
+    background: var(--scrim);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.28s var(--ease);
+    transition: opacity 0.15s ease-out;
   }
   .side-nav.is-open .nav-scrim {
     opacity: 1;
@@ -381,7 +438,7 @@
 }
 
 :root[data-theme='dark'] .side-nav {
-  background: var(--nav-fill);
+  background: var(--surface-1);
 }
 @media (max-width: 1023.98px) {
   :root[data-theme='dark'] .side-nav {

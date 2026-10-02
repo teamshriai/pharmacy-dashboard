@@ -165,7 +165,7 @@ export function Dashboard({ store }: { store: Store }) {
                     return (
                       <tr key={r.id} className="is-link" onClick={() => store.openRx(r.id)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && store.openRx(r.id)}>
                         {/* Priority, with the status under it only when it is unusual (checking, on hold). */}
-                        <td>
+                        <td data-label="Priority">
                           <span className="ph-prio">
                             {r.stat ? <Stat /> : <span className="ph-muted">Routine</span>}
                             {r.status !== 'New' && <Status status={r.status} />}
@@ -173,7 +173,7 @@ export function Dashboard({ store }: { store: Store }) {
                             {r.note && <span className="ph-note">{r.note}</span>}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Patient">
                           <span className="ph-patient-cell">
                             <Avatar name={r.patient.name} type={r.type} />
                             <span>
@@ -182,9 +182,9 @@ export function Dashboard({ store }: { store: Store }) {
                             </span>
                           </span>
                         </td>
-                        <td>{r.patient.encounter === 'Outpatient' ? 'OPD' : placeOf(r.patient)}</td>
-                        <td><TypeBadge type={r.type} /></td>
-                        <td>
+                        <td data-label="Location">{r.patient.encounter === 'Outpatient' ? 'OPD' : placeOf(r.patient)}</td>
+                        <td data-label="Type"><TypeBadge type={r.type} /></td>
+                        <td data-label="Waiting">
                           <span className={`ph-tat ph-tat--${t.level}`} title={`In at ${hhmm(r.time)} · target ${duration(t.target)}`}>
                             <span className="ph-tat-text">{duration(t.waited)}</span>
                             <span className="ph-tat-bar"><span style={{ width: `${Math.min(100, (t.waited / t.target) * 100)}%` }} /></span>
@@ -205,8 +205,8 @@ export function Dashboard({ store }: { store: Store }) {
                       onKeyDown={(e) => e.key === 'Enter' && store.openBill(b.no)}
                       title="Open the bill"
                     >
-                      <td><span className="ph-status ph-status--ok"><Icon name="checkCircle" size={12} />Done</span></td>
-                      <td>
+                      <td data-label="Priority"><span className="ph-status ph-status--ok"><Icon name="checkCircle" size={12} />Done</span></td>
+                      <td data-label="Patient">
                         <span className="ph-patient-cell">
                           <Avatar name={b.patient.name} type={type} />
                           <span>
@@ -215,9 +215,9 @@ export function Dashboard({ store }: { store: Store }) {
                           </span>
                         </span>
                       </td>
-                      <td>{b.patient.encounter === 'Outpatient' ? 'OPD' : placeOf(b.patient)}</td>
-                      <td><TypeBadge type={type} /></td>
-                      <td><span className="ph-wq-donetime">Done {hhmm(b.at)}</span></td>
+                      <td data-label="Location">{b.patient.encounter === 'Outpatient' ? 'OPD' : placeOf(b.patient)}</td>
+                      <td data-label="Type"><TypeBadge type={type} /></td>
+                      <td data-label="Waiting"><span className="ph-wq-donetime">Done {hhmm(b.at)}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -284,9 +284,9 @@ export function Dashboard({ store }: { store: Store }) {
               <tbody>
                 {low.slice(0, LIST_ROWS).map(({ p, qty }) => (
                   <tr key={p.id} className="is-link" onClick={() => store.openProduct(p.id)}>
-                    <td title={productName(p)}>{productName(p)}</td>
-                    <td className="num"><strong>{qty}</strong><span className="ph-muted"> / {p.reorder}</span></td>
-                    <td><StockGauge qty={qty} reorder={p.reorder} /></td>
+                    <td data-label="Medicine" title={productName(p)}>{productName(p)}</td>
+                    <td data-label="On hand" className="num"><strong>{qty}</strong><span className="ph-muted"> / {p.reorder}</span></td>
+                    <td data-label="" className="ph-cell-act"><StockGauge qty={qty} reorder={p.reorder} /></td>
                   </tr>
                 ))}
               </tbody>

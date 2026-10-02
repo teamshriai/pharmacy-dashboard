@@ -28,13 +28,14 @@ const money = (n: number) => 'Rs. ' + n.toLocaleString('en-IN', { minimumFractio
 
 type RGB = [number, number, number];
 const hex = (h: string): RGB => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as RGB;
-const BRAND = hex('#1b4d8f');
-const INK = hex('#15161c');
-const MUTED = hex('#5b6273');
-const LINE = hex('#dde3ea');
-const TINT = hex('#f3f6fa');
-const OK = hex('#137547');
-const OK_SOFT = hex('#e3f3ea');
+// SHRI HEALTH design system colours (DESIGN_SYSTEM.md §4), light theme.
+const BRAND = hex('#2563eb'); // primary-600
+const INK = hex('#0f172a');
+const MUTED = hex('#57677c'); // ink-subtle
+const LINE = hex('#d9e1ea'); // border-soft
+const TINT = hex('#f4f7fa'); // surface-2
+const OK = hex('#2f6b5e'); // success-fg
+const OK_SOFT = hex('#e6f0ee'); // success-bg
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;

@@ -12,25 +12,30 @@
    Plus (pointer: coarse) for touch sizing and (hover: hover) for hover effects.
    ========================================================================== */
 
-/* Prescription-type colours. Validated as a categorical palette (lightness,
-   chroma, colour-blind separation, contrast) for each mode separately; always
+/* Prescription-type colours, from the design system's solid tiles (DS §4.4):
+   --q-* is the colour used for text and tints (lifted to the pastel -fg in dark
+   mode), --q-*-fill a solid fill that carries white text in both themes. Always
    shown with an icon and label, never colour alone. */
 :root {
-  --q-op: #2563eb;
-  --q-ip: #0d9488;
-  --q-er: #7c3aed;
-  --q-dc: #ea580c;
+  --q-op-fill: var(--tile-blue);
+  --q-ip-fill: var(--tile-teal);
+  --q-er-fill: var(--tile-violet);
+  --q-dc-fill: var(--tile-amber);
+  --q-op: var(--tile-blue);
+  --q-ip: var(--tile-teal);
+  --q-er: var(--tile-violet);
+  --q-dc: var(--tile-amber);
 }
 :root[data-theme='dark'] {
-  --q-op: #3b82f6;
-  --q-ip: #0d9f90;
-  --q-er: #8b5cf6;
-  --q-dc: #dc5d14;
+  --q-op: var(--accent-sky-fg);
+  --q-ip: var(--accent-teal-fg);
+  --q-er: var(--therapy-fg);
+  --q-dc: var(--accent-sand-fg);
 }
-.ph-type--op { --q: var(--q-op); }
-.ph-type--ip { --q: var(--q-ip); }
-.ph-type--emergency { --q: var(--q-er); }
-.ph-type--discharge { --q: var(--q-dc); }
+.ph-type--op { --q: var(--q-op); --qf: var(--q-op-fill); }
+.ph-type--ip { --q: var(--q-ip); --qf: var(--q-ip-fill); }
+.ph-type--emergency { --q: var(--q-er); --qf: var(--q-er-fill); }
+.ph-type--discharge { --q: var(--q-dc); --qf: var(--q-dc-fill); }
 
 /* The shared button rule keeps the browser's own grey face; :where() keeps
    this reset at zero specificity so any styled button still wins. */
@@ -40,15 +45,16 @@
   background: none;
 }
 
-/* Cards: a soft tint across the top fading to the card colour, so large
-   panels don't read as plain white. :where() keeps this at .card's weight so
-   any card with its own background still wins. */
+/* Cards are plain surface (DS §10.5: no gradient noise). :where() keeps this
+   at .card's weight so any card with its own background still wins. */
 :where(.ph-shell) .card {
-  background: linear-gradient(180deg, var(--card-tint), var(--glass-fill-strong) 140px) var(--glass-fill-strong);
+  background: var(--surface-1);
 }
-/* Needs action carries a faint warm wash while it has something to show. */
+/* Needs action carries a faint amber wash while it has something to show:
+   the DS tintedSurface(amber, 0.045) recipe, layered over the card surface. */
 :where(.ph-shell) .ph-attn:has(.ph-attn-icon.is-on) {
-  background: linear-gradient(180deg, var(--warn-soft), var(--glass-fill-strong) 160px) var(--glass-fill-strong);
+  background-image: linear-gradient(rgb(255 159 10 / 0.045), rgb(255 159 10 / 0.045));
+  border-color: rgb(255 159 10 / 0.16);
 }
 
 .ph-main {
@@ -59,10 +65,15 @@
 .ph-stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .ph-card {
-  padding: 18px 20px;
+  padding: 1.25rem;
+}
+@media (max-width: 640px) {
+  .ph-card {
+    padding: 1rem;
+  }
 }
 .ph-block {
   width: 100%;
@@ -70,12 +81,12 @@
 }
 .ph-muted {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.02em;
 }
 .num {
@@ -84,35 +95,41 @@
 }
 .ph-sub {
   margin: 0 0 10px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-3);
 }
 .ph-time {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 
-/* ---------- Section head ---------- */
+/* ---------- Section head (DS §9.2 SectionHeading: a 44px row) ---------- */
 .ph-head {
   display: flex;
   align-items: center;
-  gap: 11px;
-  margin-bottom: 14px;
+  gap: 10px;
+  min-height: var(--tap-min);
+  margin-bottom: 12px;
 }
 .ph-head-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--butter-soft);
-  color: var(--butter);
+  /* DS SoftIconTile (sm): a 12% tint, the glyph a shade darker. */
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--tone-blue) 12%, transparent);
+  color: color-mix(in oklab, var(--tone-blue) 72%, black);
+}
+:root[data-theme='dark'] .ph-head-icon {
+  background: color-mix(in oklab, var(--tone-blue) 18%, transparent);
+  color: var(--tone-blue);
 }
 .ph-head-text {
   flex: 1;
@@ -121,21 +138,22 @@
 .ph-head-text h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15.5px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
   color: var(--ink);
 }
 .ph-head-text p {
   margin: 2px 0 0;
-  font-size: 12.5px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
 }
 
 /* ---------- Chips, segmented controls ---------- */
 .ph-chips {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   overflow-x: auto;
   padding: 2px;
   scrollbar-width: none;
@@ -143,90 +161,101 @@
 .ph-chips::-webkit-scrollbar {
   display: none;
 }
+/* Radio chips (DS §9.3 / §10.4): pill, 44px; on = solid fill, off = hairline. */
 .ph-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  padding: 6px 12px;
-  border: 1px solid var(--glass-hairline);
+  min-height: var(--tap-min);
+  padding: 0 14px;
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
-  background: var(--glass-fill-muted);
-  font-size: 12.5px;
+  background: var(--surface-1);
+  font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--ink-2);
-  transition: transform 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+  color: var(--ink-muted);
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background-color 0.15s var(--ease);
 }
 .ph-chip svg {
-  color: var(--q, var(--ink-3));
+  color: var(--q, var(--ink-subtle));
 }
 .ph-chip:hover {
-  transform: translateY(-2px);
-  border-color: var(--q, var(--butter));
+  border-color: var(--border-strong);
   color: var(--ink);
 }
-.ph-chip--on {
-  border-color: transparent;
-  background: var(--q, var(--butter));
-  color: #fff;
-  font-weight: 600;
-}
-.ph-chip--on svg,
+.ph-chip--on,
 .ph-chip--on:hover {
+  border-color: var(--qf, var(--brand-fill));
+  background: var(--qf, var(--brand-fill));
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+.ph-chip--on svg {
   color: #fff;
 }
-.ph-chip--op { --q: var(--q-op); }
-.ph-chip--ip { --q: var(--q-ip); }
-.ph-chip--emergency { --q: var(--q-er); }
-.ph-chip--discharge { --q: var(--q-dc); }
+.ph-chip--op { --q: var(--q-op); --qf: var(--q-op-fill); }
+.ph-chip--ip { --q: var(--q-ip); --qf: var(--q-ip-fill); }
+.ph-chip--emergency { --q: var(--q-er); --qf: var(--q-er-fill); }
+.ph-chip--discharge { --q: var(--q-dc); --qf: var(--q-dc-fill); }
+/* Count pill (DS §10.4). */
 .ph-chip-count {
-  min-width: 18px;
-  padding: 0 5px;
+  min-width: 20px;
+  padding: 1px 6px;
   border-radius: 999px;
-  background: var(--glass-inset);
-  font-size: 11px;
+  background: var(--surface-3);
+  color: var(--ink-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
 .ph-chip--on .ph-chip-count {
-  background: rgb(255 255 255 / 0.24);
+  background: rgb(255 255 255 / 0.22);
+  color: #fff;
 }
 
+/* Segmented control (DS §10.4): surface-2 track, the chosen segment lifted. */
 .ph-seg {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 3px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--glass-inset);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-2);
 }
 .ph-seg button {
-  padding: 6px 12px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-3);
-  transition: background 0.2s var(--ease), color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  min-height: 2.5rem;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-muted);
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 .ph-seg button:hover {
   color: var(--ink);
 }
 .ph-seg button.is-on {
-  background: var(--glass-fill-strong);
+  background: var(--surface-1);
   color: var(--ink);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
 }
 
 /* ---------- Badges ---------- */
+/* Category badge (DS StatusBadge, xs): a soft tint of the type colour, its
+   words in the same hue, and a 25% edge. */
 .ph-type {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--q) 15%, transparent);
-  color: var(--ink);
-  font-size: 11.5px;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--q) 25%, transparent);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--q) 10%, transparent);
+  color: var(--q);
+  font-size: var(--text-2xs);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -240,10 +269,9 @@
   width: 24px;
   height: 22px;
   flex-shrink: 0;
-  border-radius: 6px;
-  background: var(--danger);
+  border-radius: var(--radius-chip);
+  background: var(--emergency-fill);
   color: #fff;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 22%, transparent);
 }
 .ph-stat--count {
   display: inline-flex;
@@ -252,8 +280,8 @@
   margin-left: 8px;
   padding: 0 7px 0 5px;
   font-family: var(--font);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--text-2xs);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   vertical-align: middle;
 }
@@ -269,21 +297,24 @@
   align-items: center;
   gap: 6px;
 }
+/* StatusBadge (DS §10.6, xs): tone bg + fg + a 25% edge, always with words. */
 .ph-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 11.5px;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-chip);
+  font-size: var(--text-2xs);
   font-weight: 600;
   white-space: nowrap;
+  user-select: none;
 }
-.ph-status--ok { background: var(--ok-soft); color: var(--ok); }
-.ph-status--warn { background: var(--warn-soft); color: var(--warn); }
-.ph-status--danger { background: var(--danger-soft); color: var(--danger); }
-.ph-status--info { background: color-mix(in srgb, var(--tone-sky) 16%, transparent); color: var(--tone-sky); }
-.ph-status--neutral { background: var(--glass-inset); color: var(--ink-2); }
+.ph-status--ok { background: var(--success-bg); color: var(--success-fg); border-color: color-mix(in srgb, var(--success-fg) 25%, transparent); }
+.ph-status--warn { background: var(--warning-bg); color: var(--warning-fg); border-color: color-mix(in srgb, var(--warning-fg) 25%, transparent); }
+.ph-status--danger { background: var(--critical-bg); color: var(--critical-fg); border-color: color-mix(in srgb, var(--critical-fg) 25%, transparent); }
+.ph-status--info { background: var(--info-bg); color: var(--info-fg); border-color: color-mix(in srgb, var(--info-fg) 25%, transparent); }
+.ph-status--neutral { background: var(--surface-2); color: var(--ink-subtle); border-color: var(--border-soft); }
 .ph-status-stack {
   display: inline-flex;
   flex-wrap: wrap;
@@ -296,7 +327,7 @@
   padding: 1px 6px;
   border: 1px solid var(--line-2);
   border-radius: 6px;
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   color: var(--tone-sky);
 }
@@ -311,16 +342,16 @@
 .ph-note {
   display: block;
   margin-top: 3px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-nav-count {
   min-width: 20px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: var(--tone-rose);
+  background: var(--emergency-fill);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   text-align: center;
 }
@@ -333,90 +364,226 @@
   height: 36px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: var(--q);
+  background: var(--qf, var(--tile-blue));
   color: #fff;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
+/* Empty state (DS §10.10): a round surface-2 well, a calm sentence. */
 .ph-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 32px 12px;
-  font-size: 13.5px;
-  color: var(--ink-3);
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--ink-muted);
 }
 .ph-empty-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--ok-soft);
-  color: var(--ok);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-subtle);
 }
 
-/* ---------- Tables ---------- */
+/* ---------- Tables (DS §10.9) ---------- */
 .ph-table-wrap {
   overflow-x: auto;
-  margin: 0 -4px;
   -webkit-overflow-scrolling: touch;
-  /* Edge shadows appear only while there is more table to scroll to. */
-  background:
-    linear-gradient(to right, var(--glass-fill-strong) 30%, transparent) left / 24px 100% no-repeat local,
-    linear-gradient(to left, var(--glass-fill-strong) 30%, transparent) right / 24px 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, rgba(16, 24, 40, 0.16), transparent) left / 10px 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, rgba(16, 24, 40, 0.16), transparent) right / 10px 100% no-repeat scroll;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-1);
 }
 .ph-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  text-align: left;
+  font-size: var(--text-xs);
 }
 .ph-table th {
-  padding: 0 10px 9px;
-  border-bottom: 1px solid var(--glass-hairline);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
   text-align: left;
-  text-transform: uppercase;
+  text-transform: none;
   white-space: nowrap;
-  color: var(--ink-3);
+  color: var(--ink-muted);
 }
 .ph-table th.num {
   text-align: right;
 }
 .ph-table td {
-  padding: 10px;
-  border-bottom: 1px solid var(--glass-hairline);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft);
   vertical-align: middle;
   color: var(--ink);
+}
+.ph-table td.num {
+  font-variant-numeric: tabular-nums;
 }
 .ph-table tbody tr:last-child td {
   border-bottom: none;
 }
-/* Faint banding so long tables read row by row; hover and selection still win. */
-.ph-table tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--glass-fill-muted) 70%, transparent);
-}
 .ph-table tr.is-link {
   cursor: pointer;
-  transition: background 0.18s var(--ease);
+  transition: background-color 0.15s var(--ease);
 }
 .ph-table tr.is-link:hover,
-.ph-table tr.is-link:focus-visible,
-.ph-table tr.is-open {
-  background: var(--glass-fill-hover);
+.ph-table tr.is-link:focus-visible {
+  background: var(--surface-2);
   outline: none;
 }
-.ph-table tr.is-stat td:first-child {
-  box-shadow: inset 3px 0 0 var(--danger);
+.ph-table tr.is-open,
+.ph-table tr.is-open:hover {
+  background: var(--primary-50);
 }
+.ph-table tr.is-stat td:first-child {
+  box-shadow: inset 3px 0 0 var(--emergency-fill);
+}
+
+/* Phones (below 768px): every row becomes a card, and each cell carries its
+   column name from data-label (DS §10.9: no sideways-scrolling tables).
+   Screens only: a printed page is narrower than 768px but should keep tables. */
+@media screen and (max-width: 767px) {
+  .ph-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .ph-table,
+  .ph-table tbody,
+  .ph-table tfoot {
+    display: block;
+  }
+  .ph-table thead {
+    display: none;
+  }
+  .ph-table tbody tr,
+  .ph-table tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    margin-bottom: 8px;
+    padding: 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+  .ph-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .ph-table tfoot tr {
+    margin-top: 8px;
+    background: var(--surface-2);
+  }
+  .ph-table tr.is-open {
+    box-shadow: 0 0 0 1px var(--primary-600);
+  }
+  .ph-table td,
+  .ph-table tbody tr:last-child td {
+    display: block;
+    min-width: 0;
+    width: auto !important; /* desktop column-width tricks (width: 1%) don't apply to cards */
+    padding: 0;
+    border: 0;
+    text-align: left !important;
+    white-space: normal;
+  }
+  .ph-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    color: var(--ink-subtle);
+  }
+  /* The first cell names the row: full width, no label. */
+  .ph-table td:first-child {
+    grid-column: 1 / -1;
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .ph-table td:first-child::before {
+    display: none;
+  }
+  .ph-table td[data-label='']::before,
+  .ph-table td:not([data-label])::before {
+    display: none;
+  }
+  /* Actions sit at the end of the card, full width. */
+  .ph-table tbody tr td.ph-cell-act,
+  .ph-table tbody tr:last-child td.ph-cell-act {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .ph-table td.ph-cell-wide {
+    grid-column: 1 / -1;
+  }
+  /* A cell spanning the whole table (detail row, "nothing waiting") stays full width. */
+  .ph-table tbody td[colspan] {
+    grid-column: 1 / -1;
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+  /* Footers read as one line: what it is on the left, the amount on the right. */
+  .ph-table tfoot td,
+  .ph-table tfoot td:first-child {
+    grid-column: auto;
+    font-size: var(--text-sm);
+  }
+  .ph-table tfoot td:last-child {
+    text-align: right !important;
+    font-weight: 600;
+  }
+  /* Desktop row markers (selected / STAT stripes on the first cell) give way
+     to the card's own edge. */
+  .ph-table tbody tr td:first-child {
+    box-shadow: none !important;
+  }
+  .ph-table tr.is-stat {
+    border-left: 3px solid var(--emergency-fill);
+  }
+  /* Flush panels (dashboard) give their cards room from the panel edge,
+     and drop the column padding meant for the desktop table. */
+  .ph-panel .ph-table tbody,
+  .ph-panel .ph-table tfoot {
+    padding: 12px;
+  }
+  .ph-shell .ph-panel .ph-table td,
+  .ph-shell .ph-panel .ph-table td:first-child,
+  .ph-shell .ph-panel .ph-table td:last-child {
+    padding: 0;
+    white-space: normal;
+  }
+  /* The dashboard queue lists everyone in full on a phone instead of
+     scrolling inside a short box. */
+  .ph-wq-scroll,
+  .ph-wq-scroll.more-above,
+  .ph-wq-scroll.more-below {
+    max-height: none;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
 .ph-patient-cell,
 .ph-prod {
   display: flex;
@@ -436,59 +603,75 @@
 }
 .ph-patient-cell span span,
 .ph-prod span span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 
 /* ---------- Dashboard ---------- */
+/* KPI tiles: the DS flat staff tile (§9.4): white, hairline, a small grey
+   label with a surface-2 icon chip, then the number. */
 .ph-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 .ph-kpi {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto;
-  column-gap: 13px;
+  column-gap: 12px;
+  row-gap: 4px;
   align-items: center;
-  padding: 16px 18px;
-  border: 1px solid var(--glass-border);
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-  background: var(--glass-fill);
-  box-shadow: var(--shadow);
+  background: var(--surface-1);
   text-align: left;
   overflow: hidden;
-  transition: box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+  transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease), border-color 0.25s var(--ease);
 }
 .ph-kpi:hover {
-  border-color: color-mix(in srgb, var(--card-tone) 50%, var(--glass-border));
-  box-shadow: var(--shadow-lift);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card-md);
 }
 .ph-kpi-icon {
   grid-row: span 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--card-tone) 12%, transparent);
-  color: var(--card-tone);
+  width: 28px;
+  height: 28px;
+  align-self: start;
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--primary-700);
+}
+:root[data-theme='dark'] .ph-kpi-icon {
+  color: var(--primary-500);
 }
 .ph-kpi-value {
   font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .ph-kpi-label {
-  font-size: 12.5px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--ink-subtle);
+}
+/* Label above the number, as the DS tile reads. */
+.ph-kpi > .ph-kpi-label {
+  grid-column: 2;
+  grid-row: 1;
+}
+.ph-kpi > .ph-kpi-value {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .ph-dash {
@@ -509,14 +692,15 @@
   bottom: calc(100% + 8px);
   left: 50%;
   z-index: 20;
-  padding: 5px 9px;
-  border-radius: 7px;
+  padding: 6px 10px;
+  border-radius: var(--radius-chip);
   background: var(--ink);
-  color: var(--page-from);
-  font-size: 11.5px;
+  color: var(--surface-1);
+  font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
   transform: translateX(-50%);
+  box-shadow: var(--shadow-card-lg);
   pointer-events: none;
 }
 /* Touch screens have no hover: a tap shows the value instead. */
@@ -531,7 +715,7 @@
     border-radius: 7px;
     background: var(--ink);
     color: var(--page-from);
-    font-size: 11.5px;
+    font-size: var(--text-2xs);
     font-weight: 600;
     white-space: nowrap;
     transform: translateX(-50%);
@@ -577,12 +761,12 @@
   gap: 1px;
 }
 .ph-rx-id strong {
-  font-size: 14.5px;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .ph-rx-id span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-steps {
@@ -597,7 +781,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--ink-3);
 }
@@ -619,14 +803,14 @@
   height: 22px;
   border: 2px solid var(--line-2);
   border-radius: 50%;
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .ph-steps li.is-done {
   color: var(--ok);
 }
 .ph-steps li.is-done > span {
   border-color: var(--ok);
-  background: var(--ok);
+  background: var(--ok-fill);
   color: var(--brand-on);
 }
 .ph-steps li.is-now {
@@ -654,7 +838,7 @@
 .ph-patient-top .ph-avatar {
   width: 44px;
   height: 44px;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .ph-patient-top > span:last-child {
   display: flex;
@@ -663,11 +847,11 @@
   min-width: 0;
 }
 .ph-patient-top strong {
-  font-size: 15px;
+  font-size: var(--text-base);
   color: var(--ink);
 }
 .ph-patient-top span span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
@@ -676,7 +860,7 @@
   flex-direction: column;
   gap: 5px;
   margin: 0 0 12px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-facts div {
   display: flex;
@@ -700,7 +884,7 @@
   border-radius: 10px;
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 .ph-allergy--none {
@@ -720,7 +904,7 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-check svg {
   flex-shrink: 0;
@@ -733,7 +917,7 @@
   min-width: 0;
 }
 .ph-check strong {
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
@@ -810,12 +994,12 @@ tr.is-link:hover .ph-med-icon {
   min-width: 0;
 }
 .ph-med-name strong {
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--ink);
 }
 .ph-med-name span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-med-flags {
@@ -828,7 +1012,7 @@ tr.is-link:hover .ph-med-icon {
   gap: 7px;
 }
 .ph-qty-of {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -852,7 +1036,7 @@ tr.is-link:hover .ph-med-icon {
   height: 26px;
   border-radius: 50%;
   background: var(--page-via);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
@@ -861,7 +1045,7 @@ tr.is-link:hover .ph-med-icon {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   color: var(--danger);
 }
@@ -891,7 +1075,7 @@ tr.is-link:hover .ph-med-icon {
   border-radius: 999px;
   background: var(--ok-soft);
   color: var(--ok);
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 700;
 }
 .ph-fefo.is-manual {
@@ -918,12 +1102,12 @@ tr.is-link:hover .ph-med-icon {
   height: 20px;
   border-radius: 50%;
   background: var(--glass-inset);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   color: var(--ink-2);
 }
 tr.is-picked .ph-order {
-  background: var(--ok);
+  background: var(--ok-fill);
   color: var(--brand-on);
 }
 .ph-pick {
@@ -934,7 +1118,7 @@ tr.is-picked .ph-order {
   border-radius: 8px;
   background: var(--glass-fill-strong);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--ink);
@@ -955,7 +1139,7 @@ tr.is-picked .ph-order {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--butter) 20%, transparent);
 }
 .ph-off-why {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--danger);
 }
@@ -968,7 +1152,7 @@ tr.is-picked .ph-order {
   border-radius: 8px;
   background: var(--warn-soft);
   color: var(--warn);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 .ph-short svg {
@@ -986,7 +1170,7 @@ tr.is-picked .ph-order {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--ink-2);
@@ -997,7 +1181,7 @@ tr.is-picked .ph-order {
 .ph-exp em {
   padding: 1px 6px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
 }
@@ -1028,7 +1212,7 @@ tr.is-picked .ph-order {
   margin: 0 0 12px;
   padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .ph-bill-lines li {
   display: flex;
@@ -1050,7 +1234,7 @@ tr.is-picked .ph-order {
   margin: 0 0 18px;
   padding-top: 10px;
   border-top: 1px dashed var(--line-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-totals div {
   display: flex;
@@ -1067,8 +1251,8 @@ tr.is-picked .ph-order {
 .ph-net dt,
 .ph-net dd {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 800;
+  font-size: var(--text-xl);
+  font-weight: 700;
   color: var(--ink);
 }
 .ph-pay {
@@ -1088,7 +1272,7 @@ tr.is-picked .ph-order {
   padding: 9px 11px;
   border-radius: 10px;
   background: color-mix(in srgb, var(--q-ip) 14%, transparent);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
@@ -1141,11 +1325,11 @@ tr.is-picked .ph-order {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-verify strong {
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-hold-btn {
@@ -1167,7 +1351,7 @@ tr.is-picked .ph-order {
   border: 1px solid var(--glass-hairline);
   border-radius: 10px;
   background: var(--glass-fill-muted);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink);
   transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
 }
@@ -1188,7 +1372,7 @@ tr.is-picked .ph-order {
   background: var(--warn-soft);
   color: var(--warn);
   list-style: none;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-align: left;
 }
@@ -1246,12 +1430,12 @@ tr.is-picked .ph-order {
   padding: 4px 10px;
   border-radius: 8px;
   background: var(--glass-inset);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink);
 }
 .ph-master li span {
   margin-right: 6px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1267,7 +1451,7 @@ tr.is-picked .ph-order {
   gap: 5px;
   padding: 4px 9px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--ink-3);
   transition: background 0.2s var(--ease), color 0.2s var(--ease);
@@ -1289,7 +1473,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-reasons .ph-hold-reason {
   padding: 4px 9px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
 }
 
 /* ---------- Small buttons, close, confirmations ---------- */
@@ -1297,7 +1481,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 .ph-small-btn {
   min-height: 34px;
   padding: 0 14px;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .field-input.is-bad {
@@ -1332,11 +1516,11 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   flex: 1;
   flex-direction: column;
   gap: 1px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-2);
 }
 .ph-posted strong {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--ok);
 }
 .ph-posted .ph-x {
@@ -1358,17 +1542,22 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   gap: 8px;
   flex: 1;
   max-width: 420px;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
-  background: var(--glass-fill-muted);
-  color: var(--ink-3);
+  /* DS search field (§10.2): rounded-xl, hairline, a 4px soft ring on focus. */
+  min-height: var(--tap-min);
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--ink-subtle);
   transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
+.ph-search:hover {
+  border-color: var(--border-strong);
+}
 .ph-search:focus-within {
-  border-color: var(--butter);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--butter) 20%, transparent);
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-600) 10%, transparent);
+  color: var(--primary-700);
 }
 .ph-search input {
   flex: 1;
@@ -1377,11 +1566,11 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   outline: none;
   background: transparent;
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-search input::placeholder {
-  color: var(--ink-3);
+  color: var(--ink-subtle);
 }
 .ph-results {
   position: absolute;
@@ -1395,14 +1584,14 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 6px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  background: var(--glass-fill-strong);
-  box-shadow: var(--shadow-lift);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-card-lg);
 }
 .ph-results-head {
   margin: 6px 8px 4px;
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1410,7 +1599,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-results-none {
   margin: 10px;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-result {
@@ -1434,16 +1623,16 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 0;
 }
 .ph-result strong {
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
 .ph-result span span {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-result-qty {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
@@ -1514,13 +1703,13 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
     height: 34px;
   }
   .ph-kpi-value {
-    font-size: 22px;
+    font-size: var(--text-2xl);
   }
   .ph-steps li {
     font-size: 0;
   }
   .ph-steps li > span {
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
   /* Prescriber and item count give way so the queue fits a phone. */
   .ph-queue-table th:nth-child(4),
@@ -1553,8 +1742,8 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: var(--q-ip);
+  border-radius: 8px;
+  background: var(--q-ip-fill);
   color: #fff;
 }
 .ph-nurse-text {
@@ -1562,11 +1751,11 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   flex-direction: column;
   gap: 0;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-nurse-text em {
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1574,7 +1763,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   color: var(--q-ip);
 }
 .ph-nurse-text strong {
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
@@ -1596,10 +1785,10 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   flex-direction: row;
   align-items: baseline;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
 }
 .ph-nurse--compact .ph-nurse-text strong {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--ink-2);
 }
@@ -1612,7 +1801,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   gap: 1px;
 }
 .ph-ipbill > span > span {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 500;
   color: var(--ink-3);
 }
@@ -1624,7 +1813,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   padding: 5px 12px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--q-ip) 12%, transparent);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
@@ -1638,7 +1827,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   box-shadow: var(--shadow);
 }
 .ph-kpi-value--money {
-  font-size: 21px;
+  font-size: var(--text-2xl);
 }
 .ph-billing {
   display: grid;
@@ -1652,7 +1841,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   gap: 2px;
 }
 .ph-bill-no span {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-bill-table tr.is-open td:first-child {
@@ -1728,11 +1917,11 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 0;
 }
 .ph-find-who strong {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-find-who span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-find-none {
@@ -1770,7 +1959,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   gap: 7px;
 }
 .ph-chip--danger {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: #fff;
 }
 .ph-chip--danger svg {
@@ -1782,7 +1971,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-height: 34px;
   padding-top: 5px;
   padding-bottom: 5px;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 /* Patient strip shown on the prescription and review steps */
@@ -1804,11 +1993,11 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 160px;
 }
 .ph-pstrip-who strong {
-  font-size: 14.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-pstrip-who span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-pstrip .ph-encounter {
@@ -1833,7 +2022,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 200px;
 }
 .ph-seg button.ph-seg-stat {
-  background: var(--danger);
+  background: var(--emergency-fill);
   color: #fff;
 }
 
@@ -1869,7 +2058,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-height: 38px;
   padding-top: 7px;
   padding-bottom: 7px;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .ph-entry .field-input:disabled {
   opacity: 0.45;
@@ -1881,10 +2070,10 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   height: 24px;
   margin-bottom: 7px;
   border-radius: 50%;
-  background: var(--vivid);
+  background: var(--brand-fill);
   color: #fff;
-  font-size: 11.5px;
-  font-weight: 800;
+  font-size: var(--text-2xs);
+  font-weight: 700;
 }
 .ph-entry-x {
   margin: 0 0 4px;
@@ -1895,7 +2084,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   border-radius: 5px;
   background: var(--warn-soft);
   color: var(--warn);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
 }
@@ -1914,7 +2103,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   gap: 5px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
 }
 .ph-entry-stock.is-ok {
@@ -1945,12 +2134,12 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--glass-inset);
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--ink);
 }
 .ph-review-meta em {
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -2069,12 +2258,12 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   margin-bottom: 12px;
 }
 .ph-txn-title {
-  font-size: 20px;
+  font-size: var(--text-xl);
 }
 .ph-txn-amount {
   margin: 6px 0 4px;
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: var(--text-3xl);
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -2090,7 +2279,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 0;
 }
 .ph-txn-facts dt {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2098,7 +2287,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-txn-facts dd {
   margin: 3px 0 0;
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--ink);
   overflow-wrap: anywhere;
@@ -2151,13 +2340,13 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 .ph-ask-head h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15.5px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink);
 }
 .ph-ask-head p {
   margin: 1px 0 0;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-ask-icon {
@@ -2183,7 +2372,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   border-radius: var(--radius-sm);
   background: var(--glass-fill-strong);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-ask-form input:focus {
@@ -2203,21 +2392,21 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-ask-chips .ph-chip {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
 }
 .ph-ask-answer {
   margin-top: 12px;
 }
 .ph-ask-q {
   margin: 0 0 8px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink-2);
 }
 .ph-ask-q::before {
   content: 'Q ';
   color: var(--ai);
-  font-weight: 800;
+  font-weight: 700;
 }
 .ph-ask-lines {
   display: flex;
@@ -2229,7 +2418,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--glass-inset);
   list-style: none;
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
   color: var(--ink);
 }
@@ -2243,7 +2432,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   align-items: center;
   gap: 6px;
   margin-top: 8px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-ask-src {
@@ -2253,7 +2442,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   padding: 3px 9px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-2);
   transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
 }
@@ -2267,7 +2456,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-ask-again {
   margin-top: 10px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 /* ==========================================================================
@@ -2286,7 +2475,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-paynow-title {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2295,8 +2484,8 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 .ph-paynow-amount {
   margin: 4px 0 12px;
   font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 800;
+  font-size: var(--text-2xl);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -2321,7 +2510,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-paynow-hint {
   margin: 10px 0 6px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-2);
 }
 .ph-paynow-wait {
@@ -2329,7 +2518,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   align-items: center;
   gap: 7px;
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--ink-3);
 }
@@ -2338,16 +2527,16 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-paynow-cancel {
   margin-top: 8px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-paynow-note {
   margin: 8px 0 0;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-partial-note {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   text-align: center;
 }
 .ph-kpis--3 {
@@ -2363,7 +2552,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 /* The tax line is a note under the items, quieter than the total below it. */
 .ph-txn-lines tfoot tr.ph-txn-tax td {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 500;
   color: var(--ink-3);
 }
@@ -2393,7 +2582,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 .ph-attn-head h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15.5px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink);
 }
@@ -2415,15 +2604,15 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   min-width: 22px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--danger);
+  background: var(--emergency-fill);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   text-align: center;
 }
 .ph-attn-clear {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-attn-list {
@@ -2443,7 +2632,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   border-left: 3px solid var(--attn);
   border-radius: 10px;
   background: var(--glass-fill-strong);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   line-height: 1.45;
 }
 .ph-attn--stop { --attn: var(--danger); }
@@ -2465,7 +2654,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   border: 1px solid var(--line-2);
   border-radius: 8px;
   background: var(--glass-fill-strong);
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   white-space: nowrap;
   color: var(--ink);
@@ -2477,7 +2666,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 }
 .ph-attn-more {
   margin-top: 8px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 @media (max-width: 640px) {
   .ph-attn-row {
@@ -2515,9 +2704,9 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   left: -5px;
   width: 9px;
   height: 9px;
-  border-top: 1.5px solid var(--line-2);
-  border-right: 1.5px solid var(--line-2);
-  background: var(--glass-fill-strong);
+  border-top: 1.5px solid var(--border);
+  border-right: 1.5px solid var(--border);
+  background: var(--surface-1);
   transform: translateY(-50%) rotate(45deg);
   z-index: 1;
 }
@@ -2525,8 +2714,8 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   display: grid;
   flex: 2;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-left: 1px solid var(--line);
-  background: var(--glass-inset);
+  border-left: 1px solid var(--border-soft);
+  background: var(--surface-2);
 }
 .ph-metric {
   display: flex;
@@ -2535,42 +2724,47 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   justify-content: center;
   gap: 4px;
   min-width: 0;
-  padding: 14px 18px;
+  padding: 1rem;
   text-align: left;
-  transition: background 0.2s var(--ease);
+  transition: background-color 0.15s var(--ease);
 }
 .ph-metrics-flow > li + li .ph-metric,
 .ph-metrics-side > .ph-metric + .ph-metric {
   border-left: 1px solid var(--line);
 }
 button.ph-metric:hover {
-  background: var(--glass-inset);
+  background: var(--surface-2);
 }
 .ph-metric-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: var(--text-xs);
+  font-weight: 500;
   white-space: nowrap;
-  color: var(--ink-3);
+  color: var(--ink-subtle);
+}
+.ph-metric-label svg {
+  color: var(--primary-700);
+}
+:root[data-theme='dark'] .ph-metric-label svg {
+  color: var(--primary-500);
 }
 .ph-metric-value {
   display: inline-flex;
   align-items: center;
   font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--ink);
 }
 .ph-metric-sub {
-  font-size: 11.5px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
 }
 .ph-tat-text--over { color: var(--danger); }
 .ph-tat-text--near { color: var(--warn); }
@@ -2586,48 +2780,55 @@ button.ph-metric:hover {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--line);
+  min-height: 3.5rem;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-soft);
 }
+/* Card header strip (DS §9.4): 14px semibold title, 13px context. */
 .ph-panel-head h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--ink);
 }
 .ph-panel-head p {
   margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--ink-3);
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
 }
 .ph-panel > .ph-table-wrap,
 .ph-panel > .ph-table {
   margin: 0;
 }
+/* Inside a flush panel the card is the frame, so the table wrapper drops its own. */
+.ph-panel .ph-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
 .ph-panel .ph-empty {
   padding: 26px 12px;
 }
 .ph-panel .ph-table th {
-  padding: 9px 12px;
-  background: var(--glass-inset);
-  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-soft);
 }
 .ph-panel .ph-table td {
-  padding: 9px 12px;
+  padding: 8px 12px;
 }
 .ph-panel .ph-table th:first-child,
 .ph-panel .ph-table td:first-child {
-  padding-left: 18px;
+  padding-left: 16px;
 }
 .ph-panel .ph-table th:last-child,
 .ph-panel .ph-table td:last-child {
-  padding-right: 18px;
+  padding-right: 16px;
 }
 .ph-wq .ph-avatar {
   width: 30px;
   height: 30px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   border-radius: 9px;
 }
 .ph-wq td {
@@ -2638,7 +2839,7 @@ button.ph-metric:hover {
   white-space: normal;
 }
 .ph-wq .ph-patient-cell span span {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
 }
 
 /* Turnaround: time waited, and a bar filling towards the target. */
@@ -2649,7 +2850,7 @@ button.ph-metric:hover {
   min-width: 72px;
 }
 .ph-tat-text {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
@@ -2679,7 +2880,7 @@ button.ph-metric:hover {
   align-items: start;
 }
 .ph-watch-table td {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-watch-table .ph-gauge {
   width: 64px;
@@ -2711,7 +2912,7 @@ button.ph-metric:hover {
     border-left: 0;
   }
   .ph-metric-value {
-    font-size: 20px;
+    font-size: var(--text-2xl);
   }}
 
 .ph-watch-table {
@@ -2741,16 +2942,16 @@ button.ph-metric:hover {
    its amount in the legend, so colour is never the only cue.
    ========================================================================== */
 :root {
-  --pay-upi: #1d4ed8;
-  --pay-card: #047857;
-  --pay-credit: #c2410c;
-  --pay-account: #a21caf;
+  --pay-upi: var(--chart-1);
+  --pay-card: var(--tile-teal);
+  --pay-credit: var(--chart-2);
+  --pay-account: var(--tile-violet);
 }
 :root[data-theme='dark'] {
-  --pay-upi: #5b7cfa;
-  --pay-card: #10b981;
-  --pay-credit: #f97316;
-  --pay-account: #d946ef;
+  --pay-upi: var(--chart-1);
+  --pay-card: var(--accent-teal-fg);
+  --pay-credit: var(--chart-2);
+  --pay-account: var(--therapy-fg);
 }
 .ph-pay--upi { --pay: var(--pay-upi); }
 .ph-pay--card { --pay: var(--pay-card); }
@@ -2780,13 +2981,13 @@ button.ph-metric:hover {
   margin: 0;
   white-space: nowrap;
   font-family: var(--font-display);
-  font-size: 14.5px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink);
 }
 .ph-chart-head .btn-text {
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2832,14 +3033,14 @@ button.ph-metric:hover {
   outline: none;
 }
 .ph-bar-col.is-now .ph-bar {
-  background: var(--butter);
+  background: var(--brand-fill);
 }
 .ph-bar em {
   position: absolute;
   bottom: calc(100% + 3px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -2847,7 +3048,7 @@ button.ph-metric:hover {
 }
 .ph-bar-x {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   text-align: center;
   white-space: nowrap;
   color: var(--ink-3);
@@ -2866,7 +3067,7 @@ button.ph-metric:hover {
 }
 .ph-bars--month .ph-bar-x {
   overflow: visible;
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
 }
 @media (max-width: 640px) {
   /* Thirty labels do not fit a phone: keep every fifth day and today. */
@@ -2893,7 +3094,7 @@ button.ph-metric:hover {
   border-radius: 6px;
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
@@ -2936,12 +3137,12 @@ button.ph-metric:hover {
   min-width: 0;
 }
 .ph-report-label {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-report-total strong {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
@@ -2950,7 +3151,7 @@ button.ph-metric:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2976,7 +3177,7 @@ button.ph-metric:hover {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .ph-pay-legend li {
   display: grid;
@@ -2993,7 +3194,7 @@ button.ph-metric:hover {
   color: var(--ink);
 }
 .ph-pay-legend em {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -3067,7 +3268,7 @@ button.ph-metric:hover {
   outline: none;
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink);
 }
 .ph-finder:focus-within {
@@ -3098,7 +3299,7 @@ button.ph-metric:hover {
   border-radius: 999px;
   background: var(--butter-soft);
   color: var(--butter);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
 }
 .ph-people-open--warn {
@@ -3108,7 +3309,7 @@ button.ph-metric:hover {
 
 /* Staff */
 .ph-avatar--staff {
-  background: var(--butter);
+  background: var(--brand-fill);
 }
 .ph-you {
   margin-left: 7px;
@@ -3116,7 +3317,7 @@ button.ph-metric:hover {
   border-radius: 999px;
   background: var(--butter-soft);
   color: var(--butter);
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
 }
@@ -3136,7 +3337,7 @@ button.ph-metric:hover {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid var(--glass-hairline);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .ph-activity-list li:last-child {
   border-bottom: 0;
@@ -3164,7 +3365,7 @@ button.ph-metric:hover {
   gap: 8px;
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink);
 }
@@ -3187,11 +3388,11 @@ button.ph-metric:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-set-row strong {
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-set-select {
@@ -3204,13 +3405,13 @@ button.ph-metric:hover {
 }
 .ph-set-value {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
 }
 .ph-set-note {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 @media (max-width: 768px) {
@@ -3257,7 +3458,7 @@ button.ph-metric:hover {
 }
 .ph-prod-head .ph-prod strong {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 .ph-prod-figs {
   display: grid;
@@ -3274,18 +3475,18 @@ button.ph-metric:hover {
   background: var(--glass-fill-muted);
 }
 .ph-prod-fig span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-prod-fig strong {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .ph-prod-fig em {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-style: normal;
   color: var(--ink-3);
 }
@@ -3298,7 +3499,7 @@ button.ph-metric:hover {
 }
 .ph-prod-why {
   margin: 10px 0 14px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-prod-page .ph-master {
@@ -3325,7 +3526,7 @@ button.ph-metric:hover {
 }
 .ph-po-note {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-po-actions {
@@ -3349,7 +3550,7 @@ button.ph-metric:hover {
   align-items: center;
   gap: 6px;
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-sample-chip {
@@ -3357,7 +3558,7 @@ button.ph-metric:hover {
   padding: 3px 9px;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   white-space: nowrap;
   color: var(--ink-3);
@@ -3399,17 +3600,14 @@ button.ph-metric:hover {
 }
 .ph-btn-danger {
   border: 1px solid var(--danger);
-  background: var(--danger);
+  background: var(--emergency-fill);
   color: #fff;
-}
-:root[data-theme='dark'] .ph-btn-danger {
-  color: #1a0d0d;
 }
 .ph-act-confirm {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--danger);
 }
@@ -3426,23 +3624,25 @@ button.ph-metric:hover {
 /* Pop-up intimation ("Order placed"): bottom right, above everything, closes by itself. */
 .ph-toast-slot {
   position: fixed;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 50;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 60;
   pointer-events: none;
 }
+/* Toast (DS §10.8): the tone pair as background and text, a 30% edge. */
 .ph-toast {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  width: min(360px, calc(100vw - 32px));
-  padding: 13px 14px;
-  border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--glass-border));
-  border-radius: var(--radius);
-  background: var(--glass-fill-strong);
-  box-shadow: var(--shadow-lift);
+  gap: 10px;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--success-fg) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--success-bg);
+  color: var(--success-fg);
+  box-shadow: var(--shadow-card-lg);
   pointer-events: auto;
-  animation: ph-toast-in 0.25s var(--ease);
+  animation: ph-toast-in 0.18s var(--ease);
 }
 @keyframes ph-toast-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -3450,13 +3650,13 @@ button.ph-metric:hover {
 .ph-toast-icon {
   display: inline-flex;
   flex-shrink: 0;
-  color: var(--ok);
+  margin-top: 1px;
+  color: inherit;
 }
 .ph-toast--error {
-  border-color: color-mix(in srgb, var(--danger) 40%, var(--glass-border));
-}
-.ph-toast--error .ph-toast-icon {
-  color: var(--danger);
+  border-color: color-mix(in srgb, var(--critical-fg) 30%, transparent);
+  background: var(--critical-bg);
+  color: var(--critical-fg);
 }
 .ph-toast-body {
   display: flex;
@@ -3464,17 +3664,23 @@ button.ph-metric:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 13px;
-  color: var(--ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: inherit;
 }
 .ph-toast-body strong {
-  font-size: 14px;
-  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: inherit;
 }
 .ph-toast-body em {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-style: normal;
-  color: var(--ink-3);
+  color: inherit;
+  opacity: 0.85;
+}
+.ph-toast .ph-x {
+  color: inherit;
 }
 @media (max-width: 640px) {
   .ph-toast-slot {
@@ -3532,7 +3738,7 @@ button.ph-metric:hover {
   margin: 0;
 }
 .ph-po-price {
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-2);
 }
 .ph-po-price strong {
@@ -3554,7 +3760,7 @@ button.ph-metric:hover {
 .ph-crash-title {
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--text-xl);
 }
 .ph-crash .btn-row {
   margin-top: 18px;
@@ -3592,6 +3798,9 @@ button.ph-metric:hover {
 /* ==========================================================================
    Print: just the page content (a receipt or report), black on white.
    ========================================================================== */
+@page {
+  margin: 14mm;
+}
 @media print {
   :root {
     color-scheme: light;
@@ -3645,13 +3854,13 @@ button.ph-metric:hover {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--glass-inset);
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   white-space: nowrap;
   color: var(--ink-2);
 }
 .ph-maker {
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-2);
 }
 .ph-colfilter {
@@ -3688,9 +3897,9 @@ button.ph-metric:hover {
   min-width: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--butter);
+  background: var(--brand-fill);
   color: var(--brand-on);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   line-height: 16px;
   text-align: center;
 }
@@ -3705,7 +3914,7 @@ button.ph-metric:hover {
   border-radius: var(--radius-sm);
   background: var(--glass-fill-strong);
   box-shadow: var(--shadow-lift);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
@@ -3732,7 +3941,7 @@ button.ph-metric:hover {
 }
 .ph-colfilter-opt em {
   font-style: normal;
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-colfilter-foot {
@@ -3757,9 +3966,10 @@ button.ph-metric:hover {
   --todo-accent: var(--butter);
   min-height: 0;
   overflow: hidden;
-  background:
-    radial-gradient(420px 160px at 100% 0%, color-mix(in srgb, var(--tone-teal) 10%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--butter) 7%, var(--glass-fill-strong)), var(--glass-fill-strong) 120px);
+  /* DS list card: a 4.5% wash of its hue over the surface, no glow. */
+  background: var(--surface-1);
+  background-image: linear-gradient(rgb(48 176 199 / 0.045), rgb(48 176 199 / 0.045));
+  border-color: rgb(48 176 199 / 0.16);
 }
 .ph-todo.has-high {
   --todo-accent: var(--danger);
@@ -3777,10 +3987,14 @@ button.ph-metric:hover {
   width: 38px;
   height: 38px;
   flex-shrink: 0;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-teal) 70%, var(--butter)));
-  color: #fff;
-  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--butter) 70%, transparent);
+  border-radius: 10px;
+  /* DS SoftIconTile: a 12% tint of the hue, the glyph a shade darker. */
+  background: color-mix(in oklab, var(--tone-teal) 12%, transparent);
+  color: color-mix(in oklab, var(--tone-teal) 72%, black);
+}
+:root[data-theme='dark'] .ph-todo-badge {
+  background: color-mix(in oklab, var(--tone-teal) 18%, transparent);
+  color: var(--tone-teal);
 }
 .ph-todo-title {
   display: flex;
@@ -3794,12 +4008,12 @@ button.ph-metric:hover {
   gap: 7px;
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink);
 }
 .ph-todo-title > span {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-todo-count {
@@ -3807,7 +4021,7 @@ button.ph-metric:hover {
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--butter-soft);
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   text-align: center;
   color: var(--butter);
@@ -3815,13 +4029,10 @@ button.ph-metric:hover {
 .ph-todo-high-count {
   padding: 1px 8px;
   border-radius: 999px;
-  background: var(--danger);
-  font-size: 11px;
+  background: var(--danger-fill);
+  font-size: var(--text-2xs);
   font-weight: 700;
   color: #fff;
-}
-:root[data-theme='dark'] .ph-todo-high-count {
-  color: #1a0d0d;
 }
 
 /* Speak: a clear, friendly control; red and pulsing while listening. */
@@ -3829,31 +4040,32 @@ button.ph-metric:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 13px 0 11px;
+  min-height: var(--tap-min);
+  padding: 0 14px 0 12px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-teal) 60%, var(--butter)));
+  background: var(--brand-fill);
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--on-primary);
   cursor: pointer;
-  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--butter) 75%, transparent);
-  transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
-}
-:root[data-theme='dark'] .ph-mic {
-  color: var(--brand-on);
+  box-shadow: var(--shadow-primary);
+  transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease), background-color 0.2s var(--ease);
 }
 .ph-mic:hover {
-  transform: translateY(-1px);
+  background: var(--primary-700);
+  box-shadow: var(--shadow-primary-hover);
+}
+.ph-mic:active {
+  transform: scale(0.97);
 }
 .ph-mic:focus-visible {
   outline: none;
   box-shadow: var(--ring);
 }
 .ph-mic.is-on {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: #fff;
   animation: ph-mic-pulse 1.4s ease-in-out infinite;
 }
@@ -3879,11 +4091,11 @@ button.ph-metric:hover {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--tone-teal)));
+  background: var(--success-fg);
   transition: width 0.4s var(--ease);
 }
 .ph-todo-progress-text {
-  font-size: 12px;
+  font-size: var(--text-2xs);
   white-space: nowrap;
   color: var(--ink-3);
 }
@@ -3913,7 +4125,7 @@ button.ph-metric:hover {
   outline: none;
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink);
 }
 .ph-todo-add .btn-text {
@@ -3933,7 +4145,7 @@ button.ph-metric:hover {
   padding: 10px 14px;
   border-radius: 999px;
   background: var(--danger-soft);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-style: italic;
   color: var(--ink);
 }
@@ -3953,7 +4165,7 @@ button.ph-metric:hover {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--warn-soft);
-  font-size: 12px;
+  font-size: var(--text-2xs);
   color: var(--warn);
 }
 .ph-todo-problem span {
@@ -3970,11 +4182,11 @@ button.ph-metric:hover {
   gap: 3px;
   padding: 16px 0 6px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-todo-empty strong {
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--ink);
 }
 .ph-todo-empty-icon {
@@ -4045,7 +4257,7 @@ button.ph-metric:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--ink);
   overflow-wrap: anywhere;
@@ -4055,7 +4267,7 @@ button.ph-metric:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 400;
   color: var(--ink-3);
@@ -4067,7 +4279,7 @@ button.ph-metric:hover {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--butter-soft);
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--butter);
 }
@@ -4092,12 +4304,12 @@ button.ph-metric:hover {
   align-items: center;
   gap: 6px;
   margin: 10px 0 0;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-todo-foot .btn-text {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-2xs);
 }
 @media (prefers-reduced-motion: reduce) {
   .ph-mic.is-on,
@@ -4115,7 +4327,7 @@ button.ph-metric:hover {
   border-radius: 6px;
   background: var(--glass-fill-strong) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6.5 9.5l5.5 5.5 5.5-5.5'/%3E%3C/svg%3E") no-repeat right 8px center;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink);
   cursor: pointer;
   appearance: none;
@@ -4213,13 +4425,13 @@ button.ph-metric:hover {
   opacity: 0.75;
 }
 .ph-wq-donetime {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--ok);
 }
 .ph-wq-none td {
   padding: 14px 10px;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 
@@ -4235,13 +4447,13 @@ button.ph-metric:hover {
 .ph-dash-side .ph-attn {
   flex: 1;
 }
+/* Full-width primary action (DS §10.1 "form submit"): 48px, rounded-xl. */
 .ph-new-order {
   justify-content: center;
   width: 100%;
-  min-height: 42px;
+  min-height: 3rem;
   border-radius: var(--radius);
-  font-size: 14.5px;
-  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--butter) 80%, transparent);
+  font-size: var(--text-sm);
 }
 
 /* Indo States Health logo, far right of the top bar; links to indostates.com. */
@@ -4251,16 +4463,17 @@ button.ph-metric:hover {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  height: 44px;
+  height: var(--tap-min);
   padding: 3px 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  /* The partner logo is drawn for a white ground, in both themes. */
   background: #fff;
   transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 .ph-partner:hover {
-  border-color: var(--butter);
-  box-shadow: var(--shadow-xs);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
 }
 .ph-partner:focus-visible {
   outline: none;
@@ -4277,31 +4490,6 @@ button.ph-metric:hover {
   }
 }
 
-
-/* Shimmer: a soft band of light sweeps across the Indo States logo every few seconds. */
-.ph-partner::after {
-  content: '';
-  position: absolute;
-  inset: -20% auto -20% 0;
-  width: 42%;
-  background: linear-gradient(105deg, transparent 0%, rgb(255 255 255 / 0) 20%, rgb(255 255 255 / 0.85) 50%, rgb(255 255 255 / 0) 80%, transparent 100%);
-  transform: translateX(-130%) skewX(-18deg);
-  pointer-events: none;
-  animation: ph-shimmer 4.5s ease-in-out 1.2s infinite;
-}
-@keyframes ph-shimmer {
-  0% { transform: translateX(-130%) skewX(-18deg); }
-  38%, 100% { transform: translateX(360%) skewX(-18deg); }
-}
-.ph-partner:hover::after {
-  animation-duration: 1.6s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ph-partner::after {
-    animation: none;
-    display: none;
-  }
-}
 
 /* ==========================================================================
    New order: the Pharmacy's official order form to Procurement (#/order)
@@ -4323,7 +4511,7 @@ button.ph-metric:hover {
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--butter-soft);
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   color: var(--butter);
 }
@@ -4339,14 +4527,14 @@ button.ph-metric:hover {
 .ph-po-head h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
 .ph-po-head p {
   margin: 3px 0 0;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-po-no {
@@ -4354,10 +4542,10 @@ button.ph-metric:hover {
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 .ph-po-no em {
-  font-size: 10.5px;
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -4398,21 +4586,21 @@ button.ph-metric:hover {
   padding: 0 12px;
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
 }
 .ph-po-prio button.is-on {
-  background: var(--butter);
+  background: var(--brand-fill);
   color: var(--brand-on);
 }
 .ph-po-prio button.is-urgent.is-on {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: #fff;
 }
 .ph-po-hint {
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--danger);
 }
 .ph-po-table th {
@@ -4432,7 +4620,7 @@ button.ph-metric:hover {
 .ph-po-cat {
   display: block;
   margin-top: 4px;
-  font-size: 11.5px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-po-qty {
@@ -4451,7 +4639,7 @@ button.ph-metric:hover {
 .ph-po-sub {
   display: block;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--ink-3);
 }
 .ph-po-low {
@@ -4469,7 +4657,7 @@ button.ph-metric:hover {
 }
 .ph-po-total-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -4477,7 +4665,7 @@ button.ph-metric:hover {
 }
 .ph-po-total {
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: var(--text-lg);
   color: var(--ink);
 }
 .ph-neworder-add {
@@ -4496,7 +4684,7 @@ button.ph-metric:hover {
   padding: 10px 14px;
   resize: vertical;
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--text-sm);
 }
 .ph-po-notes em {
   font-style: normal;
@@ -4513,7 +4701,7 @@ button.ph-metric:hover {
 }
 .ph-po-summary {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--ink-3);
 }
 .ph-po-summary strong {

@@ -10,5 +10,5 @@
   }
   document.documentElement.setAttribute('data-theme', theme);
   var bar = document.querySelector('meta[name="theme-color"]');
-  if (bar) bar.setAttribute('content', theme === 'light' ? '#f5f8fc' : '#131b2b');
+  if (bar) bar.setAttribute('content', theme === 'light' ? '#e8edf4' : '#14181f');
 })();

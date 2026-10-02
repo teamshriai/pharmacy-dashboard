@@ -99,14 +99,14 @@ export function Reports({ store }: { store: Store }) {
             <tbody>
               {sales.map((s) => (
                 <tr key={s.p.id} className="is-link" onClick={() => store.openProduct(s.p.id)}>
-                  <td>{productName(s.p)}<span className="ph-muted"> · {s.p.form}</span></td>
-                  <td className="num">{s.qty}</td>
-                  <td className="num">{inr(s.tax)}</td>
-                  <td className="num"><strong>{inr(s.amount)}</strong></td>
+                  <td data-label="Medicine">{productName(s.p)}<span className="ph-muted"> · {s.p.form}</span></td>
+                  <td data-label="Qty" className="num">{s.qty}</td>
+                  <td data-label="GST" className="num">{inr(s.tax)}</td>
+                  <td data-label="Amount" className="num"><strong>{inr(s.amount)}</strong></td>
                 </tr>
               ))}
             </tbody>
-            <tfoot><tr><td>Total</td><td className="num">{sales.reduce((n, s) => n + s.qty, 0)}</td><td className="num">{inr(tax)}</td><td className="num">{inr(total)}</td></tr></tfoot>
+            <tfoot><tr><td data-label="Medicine">Total</td><td data-label="Qty" className="num">{sales.reduce((n, s) => n + s.qty, 0)}</td><td data-label="GST" className="num">{inr(tax)}</td><td data-label="Amount" className="num">{inr(total)}</td></tr></tfoot>
           </table>
           </div>
         ))}
@@ -118,14 +118,14 @@ export function Reports({ store }: { store: Store }) {
             <tbody>
               {gst.map((g) => (
                 <tr key={g.rate}>
-                  <td>{g.rate}%<span className="ph-muted"> · CGST {g.rate / 2}% + SGST {g.rate / 2}%</span></td>
-                  <td className="num">{inr(g.taxable)}</td>
-                  <td className="num">{inr(g.tax)}</td>
-                  <td className="num"><strong>{inr(g.amount)}</strong></td>
+                  <td data-label="GST rate">{g.rate}%<span className="ph-muted"> · CGST {g.rate / 2}% + SGST {g.rate / 2}%</span></td>
+                  <td data-label="Taxable value" className="num">{inr(g.taxable)}</td>
+                  <td data-label="GST" className="num">{inr(g.tax)}</td>
+                  <td data-label="Total" className="num"><strong>{inr(g.amount)}</strong></td>
                 </tr>
               ))}
             </tbody>
-            <tfoot><tr><td>Total</td><td className="num">{inr(round(gst.reduce((n, g) => n + g.taxable, 0)))}</td><td className="num">{inr(tax)}</td><td className="num">{inr(total)}</td></tr></tfoot>
+            <tfoot><tr><td data-label="GST rate">Total</td><td data-label="Taxable value" className="num">{inr(round(gst.reduce((n, g) => n + g.taxable, 0)))}</td><td data-label="GST" className="num">{inr(tax)}</td><td data-label="Total" className="num">{inr(total)}</td></tr></tfoot>
           </table>
           </div>
         ))}
@@ -137,21 +137,21 @@ export function Reports({ store }: { store: Store }) {
             <tbody>
               {stock.map((s) => (
                 <tr key={s.loc} className="is-link" onClick={() => { store.go('stock', 'all'); store.setStockLoc(s.loc); }}>
-                  <td>{s.loc}</td>
-                  <td className="num">{s.items} of {PRODUCTS.length}</td>
-                  <td className="num">{s.units}</td>
-                  <td className={`num ${s.lost ? 'ph-report-lost' : ''}`} title="Expired or removed from use">{inr(s.lost)}</td>
-                  <td className="num"><strong>{inr(s.value)}</strong></td>
+                  <td data-label="Location">{s.loc}</td>
+                  <td data-label="Medicines" className="num">{s.items} of {PRODUCTS.length}</td>
+                  <td data-label="Units" className="num">{s.units}</td>
+                  <td data-label="Not usable" className={`num ${s.lost ? 'ph-report-lost' : ''}`} title="Expired or removed from use">{inr(s.lost)}</td>
+                  <td data-label="Value (MRP)" className="num"><strong>{inr(s.value)}</strong></td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
-                <td>Total</td>
-                <td className="num" />
-                <td className="num">{stock.reduce((n, s) => n + s.units, 0)}</td>
-                <td className="num">{inr(round(stock.reduce((n, s) => n + s.lost, 0)))}</td>
-                <td className="num">{inr(round(stock.reduce((n, s) => n + s.value, 0)))}</td>
+                <td data-label="Location">Total</td>
+                <td data-label="Medicines" className="num" />
+                <td data-label="Units" className="num">{stock.reduce((n, s) => n + s.units, 0)}</td>
+                <td data-label="Not usable" className="num">{inr(round(stock.reduce((n, s) => n + s.lost, 0)))}</td>
+                <td data-label="Value (MRP)" className="num">{inr(round(stock.reduce((n, s) => n + s.value, 0)))}</td>
               </tr>
             </tfoot>
           </table>

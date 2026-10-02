@@ -27,7 +27,7 @@ export function Staff({ store }: { store: Store }) {
                 const on = onShift(s);
                 return (
                   <tr key={s.id} className={`is-link ${pick === s.name ? 'is-open' : ''}`} onClick={() => setPick(s.name)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setPick(s.name)}>
-                    <td>
+                    <td data-label="Name">
                       <span className="ph-patient-cell">
                         <span className="ph-avatar ph-avatar--staff">{initials(s.fullName)}</span>
                         <span>
@@ -36,15 +36,15 @@ export function Staff({ store }: { store: Store }) {
                         </span>
                       </span>
                     </td>
-                    <td>{s.role}</td>
-                    <td className="ph-time">{hours(s.shift)}</td>
-                    <td>
+                    <td data-label="Role">{s.role}</td>
+                    <td data-label="Shift" className="ph-time">{hours(s.shift)}</td>
+                    <td data-label="Now">
                       <span className={`ph-status ${on ? 'ph-status--ok' : 'ph-status--neutral'}`}>
                         <Icon name={on ? 'checkCircle' : 'clock'} size={12} />
                         {on ? 'On shift' : 'Off shift'}
                       </span>
                     </td>
-                    <td className="num"><strong>{actions(s.name).length}</strong></td>
+                    <td data-label="Actions today" className="num"><strong>{actions(s.name).length}</strong></td>
                   </tr>
                 );
               })}

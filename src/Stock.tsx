@@ -185,10 +185,10 @@ function StockList({ store }: { store: Store }) {
                     tabIndex={0}
                     onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && store.openFromList(p.id)}
                   >
-                    <td><ProductCell p={p} /></td>
-                    <td><span className="ph-cat">{categoryLabel(p.category)}</span></td>
+                    <td data-label="Medicine"><ProductCell p={p} /></td>
+                    <td data-label="Category"><span className="ph-cat">{categoryLabel(p.category)}</span></td>
                     {/* Choose the maker for this medicine right here; the row itself still opens the medicine. */}
-                    <td className="ph-maker" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                    <td data-label="Manufacturer" className="ph-maker" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                       <select
                         className="ph-maker-select"
                         value={store.makerIdOf(p.id)}
@@ -198,16 +198,16 @@ function StockList({ store }: { store: Store }) {
                         {MANUFACTURERS.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Stock">
                       <span className="ph-stock-cell">
                         <strong>{qty}</strong>
                         <StockGauge qty={store.stockOf(p.id)} reorder={p.reorder} />
                       </span>
                     </td>
-                    <td>{soonest ? <Expiry batch={soonest} /> : '—'}</td>
-                    <td><StatusChips low={low} expired={expired} expiring={expiring} ordered={store.onOrder(p.id)} /></td>
+                    <td data-label="Next expiry">{soonest ? <Expiry batch={soonest} /> : '—'}</td>
+                    <td data-label="Status"><StatusChips low={low} expired={expired} expiring={expiring} ordered={store.onOrder(p.id)} /></td>
                     {/* The row opens the medicine; clicks and keys in this cell stay here. */}
-                    <td className="ph-act" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                    <td data-label="" className="ph-act ph-cell-act" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                       <RowAction
                         p={p}
                         expired={expired}
@@ -511,12 +511,12 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
               <tbody>
                 {batches.map((b: Batch) => (
                   <tr key={b.id} className={b.quarantined ? 'is-off' : ''}>
-                    <td className="mono">{b.batchNo}</td>
-                    <td>{monYr(b.mfg)}</td>
-                    <td><Expiry batch={b} /></td>
-                    <td className="num">{b.qty}</td>
-                    <td>{b.location}</td>
-                    <td className="ph-batch-act">
+                    <td data-label="Batch" className="mono">{b.batchNo}</td>
+                    <td data-label="Made">{monYr(b.mfg)}</td>
+                    <td data-label="Expiry"><Expiry batch={b} /></td>
+                    <td data-label="Qty" className="num">{b.qty}</td>
+                    <td data-label="Location">{b.location}</td>
+                    <td data-label="" className="ph-batch-act ph-cell-act">
                       {b.quarantined ? (
                         <span className="ph-status ph-status--danger"><Icon name="ban" size={12} />Removed from use · {b.quarantined}</span>
                       ) : quarantining === b.id ? (

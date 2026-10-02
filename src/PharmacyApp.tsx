@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import './design/shell.css';
 import './design/nav.css';
 import './pharmacy.css';
@@ -25,28 +25,30 @@ const THEME_KEY = 'shri-pharmacy-theme-choice';
 /** The SHRI HEALTH ribbon, served from public/ next to the page (works under any sub-path). */
 const LOGO = `${import.meta.env.BASE_URL}favicon-192.png`;
 
-type NavItem = { key: Section; label: string; icon: Parameters<typeof Icon>[0]['name'] };
+/** Each destination owns one hue (DESIGN_SYSTEM.md §4.4), shown on its nav glyph. */
+type Hue = 'blue' | 'teal' | 'green' | 'amber' | 'orange' | 'pink' | 'indigo' | 'gray';
+type NavItem = { key: Section; label: string; icon: Parameters<typeof Icon>[0]['name']; hue: Hue };
 
 /** Daily work first, then records; Settings sits apart at the foot of the rail. */
 const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
   {
     head: 'Pharmacy',
     items: [
-      { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
-      { key: 'billing', label: 'Billing', icon: 'receipt' },
-      { key: 'stock', label: 'Inventory', icon: 'layers' },
+      { key: 'dashboard', label: 'Dashboard', icon: 'grid', hue: 'blue' },
+      { key: 'billing', label: 'Billing', icon: 'receipt', hue: 'orange' },
+      { key: 'stock', label: 'Inventory', icon: 'layers', hue: 'teal' },
     ],
   },
   {
     head: 'Records',
     items: [
-      { key: 'reports', label: 'Reports', icon: 'chart' },
-      { key: 'patients', label: 'Patients', icon: 'users' },
-      { key: 'staff', label: 'Staff', icon: 'badge' },
+      { key: 'reports', label: 'Reports', icon: 'chart', hue: 'indigo' },
+      { key: 'patients', label: 'Patients', icon: 'users', hue: 'pink' },
+      { key: 'staff', label: 'Staff', icon: 'badge', hue: 'green' },
     ],
   },
 ];
-const SETTINGS: NavItem = { key: 'settings', label: 'Settings', icon: 'sliders' };
+const SETTINGS: NavItem = { key: 'settings', label: 'Settings', icon: 'sliders', hue: 'gray' };
 const NAV = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS];
 
 /** One line under each page title, so a first-time user knows what the page is for. */
@@ -112,7 +114,7 @@ export default function PharmacyApp() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     // The phone's browser bar follows the console's theme, not the device's.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131b2b' : '#f5f8fc');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#14181f' : '#e8edf4');
   }, [dark]);
 
   const rx = store.activeRx ? store.rxs.find((r) => r.id === store.activeRx) : undefined;
@@ -125,6 +127,7 @@ export default function PharmacyApp() {
 
   return (
     <div className="app-shell ph-shell">
+      <a href="#main-content" className="skip-link" onClick={(e) => { e.preventDefault(); document.getElementById('main-content')?.focus(); }}>Skip to main content</a>
       <aside className={`side-nav ${navOpen ? 'is-open' : ''}`}>
         <div className="side-head">
           {/* The logo leads back to the SHRI-AI portal the console sits under. */}
@@ -188,13 +191,21 @@ export default function PharmacyApp() {
           <div className="top-actions">
             {/* The side menu's "Sample data" note is hidden once it collapses, so say it here. */}
             <span className="ph-sample-chip" title="Demonstration data only">Sample data</span>
+            {/* Day / night switch (DESIGN_SYSTEM.md §6.3). */}
             <button
+              type="button"
+              role="switch"
+              aria-checked={dark}
+              aria-label="Night mode"
               className="theme-toggle"
               onClick={() => setDark((d) => !d)}
-              aria-label={dark ? 'Switch to day mode' : 'Switch to night mode'}
-              title={dark ? 'Day mode' : 'Night mode'}
+              title={dark ? 'Switch to day mode' : 'Switch to night mode'}
             >
-              <Icon name={dark ? 'sun' : 'moon'} size={16} />
+              <span className="theme-track" aria-hidden="true">
+                <span className="theme-knob"><Icon name={dark ? 'moon' : 'sun'} size={13} strokeWidth={2.5} /></span>
+                <span className="theme-ghost theme-ghost--sun"><Icon name="sun" size={12} /></span>
+                <span className="theme-ghost theme-ghost--moon"><Icon name="moon" size={12} /></span>
+              </span>
             </button>
             <div className="user-chip">
               <span className="user-avatar"><Icon name="userCheck" size={15} /></span>
@@ -212,7 +223,7 @@ export default function PharmacyApp() {
 
         <Toast store={store} />
 
-        <main className="app-main ph-main">
+        <main id="main-content" tabIndex={-1} className="app-main ph-main">
           {rx ? (
             <Dispense key={rx.id} store={store} rx={rx} />
           ) : store.entering ? (
@@ -282,8 +293,10 @@ function NavButton({ item: n, store, count }: { item: NavItem; store: Store; cou
   const on = store.section === n.key;
   return (
     <button className={`rail-item ${on ? 'rail-item--active' : ''}`} onClick={() => store.go(n.key)} aria-current={on ? 'page' : undefined}>
-      <span className="rail-icon"><Icon name={n.icon} size={16} /></span>
-      <span className="rail-label">{n.label}</span>
+      <span className="rail-icon" style={{ '--hue': `var(--tone-${n.hue})` } as CSSProperties}>
+        <Icon name={n.icon} size={17} strokeWidth={on ? 2.2 : 1.8} />
+      </span>
+      <span className="rail-label">{n.label}{on && <span className="sr-only"> (current page)</span>}</span>
       {!!count && <span className="ph-nav-count">{count}</span>}
     </button>
   );

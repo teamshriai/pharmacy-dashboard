@@ -64,7 +64,7 @@ export function Patients({ store }: { store: Store }) {
             <tbody>
               {shown.map((r) => (
                 <tr key={r.p.mrn} className="is-link" onClick={() => open(r)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && open(r)}>
-                  <td>
+                  <td data-label="Patient">
                     <span className="ph-patient-cell">
                       <Avatar name={r.p.name} type={TYPE_FOR[r.p.encounter]} />
                       <span>
@@ -73,14 +73,14 @@ export function Patients({ store }: { store: Store }) {
                       </span>
                     </span>
                   </td>
-                  <td><EncounterBadge encounter={r.p.encounter} /></td>
-                  <td>{placeOf(r.p)}</td>
-                  <td className="num">
+                  <td data-label="Type"><EncounterBadge encounter={r.p.encounter} /></td>
+                  <td data-label="Location">{placeOf(r.p)}</td>
+                  <td data-label="Prescriptions" className="num">
                     {r.rxCount}
                     {r.open.length > 0 && <span className="ph-people-open">{r.open.length} open</span>}
                   </td>
-                  <td className="num">{r.billed ? <strong>{inr(r.billed)}</strong> : <span className="ph-muted">—</span>}</td>
-                  <td className="ph-time">{hhmm(r.last)}</td>
+                  <td data-label="Billed" className="num">{r.billed ? <strong>{inr(r.billed)}</strong> : <span className="ph-muted">—</span>}</td>
+                  <td data-label="Last seen" className="ph-time">{hhmm(r.last)}</td>
                 </tr>
               ))}
             </tbody>

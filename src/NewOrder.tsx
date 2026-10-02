@@ -155,8 +155,8 @@ export function NewOrder({ store }: { store: Store }) {
                 const pack = p ? packOf(p.id) : 1;
                 return (
                   <tr key={l.uid}>
-                    <td className="num ph-muted">{i + 1}</td>
-                    <td className="ph-po-item">
+                    <td data-label="#" className="num ph-muted">{i + 1}</td>
+                    <td data-label="Item" className="ph-po-item">
                       <select
                         ref={i === 0 ? first : undefined}
                         className="field-input"
@@ -174,10 +174,10 @@ export function NewOrder({ store }: { store: Store }) {
                       </select>
                       {it && <span className="ph-po-cat">{it.name}</span>}
                     </td>
-                    <td className="mono">{it?.sku ?? '—'}</td>
-                    <td>{it?.manufacturer ?? '—'}</td>
-                    <td>{it?.strength ?? (p ? p.strength : '—')}</td>
-                    <td className="num">
+                    <td data-label="SKU" className="mono">{it?.sku ?? '—'}</td>
+                    <td data-label="Brand">{it?.manufacturer ?? '—'}</td>
+                    <td data-label="Strength">{it?.strength ?? (p ? p.strength : '—')}</td>
+                    <td data-label="Qty" className="num">
                       <input
                         className="field-input ph-po-qty"
                         type="number"
@@ -190,8 +190,8 @@ export function NewOrder({ store }: { store: Store }) {
                       />
                       {p && pack > 1 && l.packs > 0 && <span className="ph-po-sub">= {l.packs * pack} {p.unit}</span>}
                     </td>
-                    <td>{it?.unit ?? (p ? p.unit : '—')}</td>
-                    <td className="num">
+                    <td data-label="Unit">{it?.unit ?? (p ? p.unit : '—')}</td>
+                    <td data-label="In stock" className="num">
                       {p ? (
                         <span className={stock < p.reorder ? 'ph-po-low' : ''}>
                           {stock} {p.unit}
@@ -199,9 +199,9 @@ export function NewOrder({ store }: { store: Store }) {
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="num">{it ? inr(it.price) : p && cat === 'loading' ? '…' : '—'}</td>
-                    <td className="num"><strong>{it && l.packs > 0 ? inr(it.price * l.packs) : '—'}</strong></td>
-                    <td>
+                    <td data-label="Old price" className="num">{it ? inr(it.price) : p && cat === 'loading' ? '…' : '—'}</td>
+                    <td data-label="Amount" className="num"><strong>{it && l.packs > 0 ? inr(it.price * l.packs) : '—'}</strong></td>
+                    <td data-label="" className="ph-cell-act">
                       {lines.length > 1 && (
                         <button className="ph-x" onClick={() => setLines((ls) => ls.filter((x) => x.uid !== l.uid))} aria-label={`Remove item ${i + 1}`} disabled={sending}>
                           <Icon name="close" size={14} />
