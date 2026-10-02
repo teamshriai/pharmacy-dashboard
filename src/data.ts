@@ -34,7 +34,21 @@ export interface Product {
   cold?: boolean;
   /** Manufacturer id (see MANUFACTURERS). */
   mfr: string;
+  /** Therapeutic category, for the Inventory filter. */
+  category: Category;
 }
+
+/** Therapeutic categories, in the order the Inventory filter lists them. */
+export const CATEGORIES = [
+  { key: 'antibiotic', label: 'Antibiotic' },
+  { key: 'antidiabetic', label: 'Antidiabetic' },
+  { key: 'cardiac', label: 'Cardiac' },
+  { key: 'gastro', label: 'Gastro (acid)' },
+  { key: 'pain', label: 'Pain & fever' },
+  { key: 'emergency', label: 'Emergency' },
+] as const;
+export type Category = (typeof CATEGORIES)[number]['key'];
+export const categoryLabel = (c: Category) => CATEGORIES.find((x) => x.key === c)!.label;
 
 /**
  * Low stock follows sales: a medicine is low when what is left would last
@@ -46,18 +60,18 @@ export const SAFETY_DAYS = 2;
 export const COVER_DAYS = LEAD_DAYS + SAFETY_DAYS;
 
 const MASTER: Omit<Product, 'perDay' | 'reorder'>[] = [
-  { id: 'met500', generic: 'Metformin', strength: '500 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 1.6, unit: 'tab', sold30: 870, mfr: 'ipca' },
-  { id: 'atv20', generic: 'Atorvastatin', strength: '20 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 6.5, unit: 'tab', sold30: 630, mfr: 'drl' },
-  { id: 'asp75', generic: 'Aspirin (gastro-resistant)', strength: '75 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 0.6, unit: 'tab', sold30: 660, mfr: 'ipca' },
-  { id: 'clp75', generic: 'Clopidogrel', strength: '75 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 4.2, unit: 'tab', sold30: 420, cls: 'antiplatelet-clopidogrel', mfr: 'drl' },
-  { id: 'ome20', generic: 'Omeprazole', strength: '20 mg', form: 'Capsule', route: 'Oral', schedule: 'H', gst: 12, mrp: 2.1, unit: 'cap', sold30: 420, cls: 'ppi-omeprazole', mfr: 'drl' },
-  { id: 'amc625', generic: 'Amoxicillin + Clavulanate', strength: '625 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 18, unit: 'tab', sold30: 270, cls: 'penicillin', mfr: 'cipla' },
-  { id: 'cef1g', generic: 'Ceftriaxone', strength: '1 g', form: 'Injection', route: 'IV', schedule: 'H1', gst: 12, mrp: 62, unit: 'vial', sold30: 180, mfr: 'cipla' },
-  { id: 'pan40iv', generic: 'Pantoprazole', strength: '40 mg', form: 'Injection', route: 'IV', schedule: 'H', gst: 12, mrp: 48, unit: 'vial', sold30: 120, mfr: 'sun' },
-  { id: 'pcm1g', generic: 'Paracetamol', strength: '1 g/100 mL', form: 'Infusion', route: 'IV', schedule: 'H', gst: 12, mrp: 95, unit: 'bottle', sold30: 135, mfr: 'ipca' },
-  { id: 'ins40', generic: 'Insulin (regular)', strength: '40 IU/mL', form: 'Vial', route: 'SC', schedule: 'H', gst: 5, mrp: 145, unit: 'vial', sold30: 90, cold: true, mfr: 'biocon' },
-  { id: 'adr1', generic: 'Adrenaline', strength: '1 mg/mL', form: 'Ampoule', route: 'IV/IM', schedule: 'H', gst: 12, mrp: 18, unit: 'amp', sold30: 210, mfr: 'sun' },
-  { id: 'atr06', generic: 'Atropine', strength: '0.6 mg/mL', form: 'Ampoule', route: 'IV/IM', schedule: 'H', gst: 12, mrp: 9, unit: 'amp', sold30: 225, mfr: 'sun' },
+  { id: 'met500', generic: 'Metformin', strength: '500 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 1.6, unit: 'tab', sold30: 870, mfr: 'ipca', category: 'antidiabetic' },
+  { id: 'atv20', generic: 'Atorvastatin', strength: '20 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 6.5, unit: 'tab', sold30: 630, mfr: 'drl', category: 'cardiac' },
+  { id: 'asp75', generic: 'Aspirin (gastro-resistant)', strength: '75 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 0.6, unit: 'tab', sold30: 660, mfr: 'ipca', category: 'cardiac' },
+  { id: 'clp75', generic: 'Clopidogrel', strength: '75 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 4.2, unit: 'tab', sold30: 420, cls: 'antiplatelet-clopidogrel', mfr: 'drl', category: 'cardiac' },
+  { id: 'ome20', generic: 'Omeprazole', strength: '20 mg', form: 'Capsule', route: 'Oral', schedule: 'H', gst: 12, mrp: 2.1, unit: 'cap', sold30: 420, cls: 'ppi-omeprazole', mfr: 'drl', category: 'gastro' },
+  { id: 'amc625', generic: 'Amoxicillin + Clavulanate', strength: '625 mg', form: 'Tablet', route: 'Oral', schedule: 'H', gst: 12, mrp: 18, unit: 'tab', sold30: 270, cls: 'penicillin', mfr: 'cipla', category: 'antibiotic' },
+  { id: 'cef1g', generic: 'Ceftriaxone', strength: '1 g', form: 'Injection', route: 'IV', schedule: 'H1', gst: 12, mrp: 62, unit: 'vial', sold30: 180, mfr: 'cipla', category: 'antibiotic' },
+  { id: 'pan40iv', generic: 'Pantoprazole', strength: '40 mg', form: 'Injection', route: 'IV', schedule: 'H', gst: 12, mrp: 48, unit: 'vial', sold30: 120, mfr: 'sun', category: 'gastro' },
+  { id: 'pcm1g', generic: 'Paracetamol', strength: '1 g/100 mL', form: 'Infusion', route: 'IV', schedule: 'H', gst: 12, mrp: 95, unit: 'bottle', sold30: 135, mfr: 'ipca', category: 'pain' },
+  { id: 'ins40', generic: 'Insulin (regular)', strength: '40 IU/mL', form: 'Vial', route: 'SC', schedule: 'H', gst: 5, mrp: 145, unit: 'vial', sold30: 90, cold: true, mfr: 'biocon', category: 'antidiabetic' },
+  { id: 'adr1', generic: 'Adrenaline', strength: '1 mg/mL', form: 'Ampoule', route: 'IV/IM', schedule: 'H', gst: 12, mrp: 18, unit: 'amp', sold30: 210, mfr: 'sun', category: 'emergency' },
+  { id: 'atr06', generic: 'Atropine', strength: '0.6 mg/mL', form: 'Ampoule', route: 'IV/IM', schedule: 'H', gst: 12, mrp: 9, unit: 'amp', sold30: 225, mfr: 'sun', category: 'emergency' },
 ];
 
 export const PRODUCTS: Product[] = MASTER.map((p) => {
@@ -522,7 +536,7 @@ export interface AuditEvent {
   id: string;
   at: Date;
   user: string;
-  action: 'Rx entered' | 'Dispensed' | 'Partial' | 'Held' | 'Quarantined' | 'GRN posted' | 'Order placed';
+  action: 'Rx entered' | 'Dispensed' | 'Partial' | 'Held' | 'Quarantined' | 'GRN posted' | 'Order placed' | 'Maker set';
   detail: string;
 }
 

@@ -1,10 +1,13 @@
 /**
- * Needs attention: stock and workflow problems the console finds by itself.
+ * Needs action: stock and workflow problems the console finds by itself.
  *
  * Deliberately operational only: expired or expiring stock, stock too short to
  * fill a waiting prescription, and orders past their turnaround target. It
  * never comments on what a doctor prescribed; clinical checks belong to the
  * pharmacist's verification on the Dispense screen.
+ *
+ * Alerts never name a patient: the order number and where it is going are
+ * enough to act on, and the box sits on a screen others can see.
  *
  * Every alert is derived from current state, so it disappears the moment the
  * problem is resolved (a batch removed from use, a prescription held or
@@ -17,6 +20,7 @@ import {
   daysLeft,
   dispensable,
   duration,
+  placeOf,
   productById,
   turnaround,
   type Batch,
@@ -30,7 +34,7 @@ export interface Alert {
   level: Level;
   icon: 'ban' | 'clock' | 'layers';
   text: string;
-  action?: { label: string; kind: 'quarantine' | 'open' | 'receive' | 'stock'; ref: string };
+  action?: { label: string; kind: 'quarantine' | 'open' | 'order' | 'stock'; ref: string };
 }
 
 
@@ -60,7 +64,7 @@ export function detectAlerts(s: { batches: Batch[]; pending: Prescription[] }): 
         id: 'tat-' + r.id,
         level: 'warn',
         icon: 'clock',
-        text: `${r.patient.name}${r.stat ? ' (STAT)' : ''} waiting ${duration(t.waited)} · target ${duration(t.target)}`,
+        text: `${r.stat ? 'STAT order' : 'Order'} ${r.id} (${placeOf(r.patient)}) waiting ${duration(t.waited)} · target ${duration(t.target)}`,
         action: { label: 'Dispense now', kind: 'open', ref: r.id },
       });
     }
@@ -77,8 +81,8 @@ export function detectAlerts(s: { batches: Batch[]; pending: Prescription[] }): 
         id: `short-${r.id}-${p.id}`,
         level: 'warn',
         icon: 'layers',
-        text: `${r.patient.name}: ${p.generic} ${counter} of ${l.qty} in stock` + (store > 0 ? ` · ${store} in store` : ''),
-        action: store > 0 ? { label: 'View stock', kind: 'stock', ref: p.id } : { label: 'Receive stock', kind: 'receive', ref: p.id },
+        text: `${p.generic}: ${counter} of ${l.qty} needed for ${r.id}` + (store > 0 ? ` · ${store} in store` : ''),
+        action: store > 0 ? { label: 'View', kind: 'stock', ref: p.id } : { label: 'Order', kind: 'order', ref: p.id },
       });
     }
   }

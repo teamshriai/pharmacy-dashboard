@@ -113,13 +113,13 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
   function nextRx() {
     const next = [...store.pending].filter((r) => r.id !== rx.id).sort(byUrgency)[0];
     if (next) store.openRx(next.id);
-    else store.go('queue');
+    else store.go('dashboard');
   }
 
   return (
     <div className="ph-stack step-enter">
       <div className="card ph-card ph-rx-head">
-        <button className="btn-text" onClick={store.closeRx}>← Queue</button>
+        <button className="btn-text" onClick={store.closeRx}>← Dashboard</button>
         <span className="ph-rx-id">
           <strong>{rx.id}</strong>
           <span>{rx.doctor} · {hhmm(rx.time)}</span>

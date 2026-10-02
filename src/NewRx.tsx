@@ -158,7 +158,7 @@ export function NewRx({ store }: { store: Store }) {
     const rx = store.addRx({ patient: p, type, stat, doctor, lines: rxLines });
     if (dispenseNow) store.openRx(rx.id, rx);
     else {
-      store.go('queue');
+      store.go('dashboard');
       store.setFlash(`${rx.id} added to the queue · ${p.name}`);
     }
   }

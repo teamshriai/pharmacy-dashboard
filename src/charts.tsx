@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { Icon } from './design/Icon';
-import { YESTERDAY_BILLED_SO_FAR, band, daysLeft, earlierByHour, inr, lastDays, type Batch, type Bill, type Payment } from './data';
+import { YESTERDAY_BILLED_SO_FAR, earlierByHour, inr, lastDays, type Bill, type Payment } from './data';
 
 // ------------------------------------------------------------ footprints
 
@@ -169,53 +169,6 @@ export function TodayReport({ bills, onOpen }: { bills: Bill[]; onOpen: () => vo
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-// ------------------------------------------------------------ expiry
-
-type Bin = { key: string; label: string; test: (d: number) => boolean; tone: 'danger' | 'warn' | 'amber' | 'calm'; filter: 'expired' | 'expiring' | 'all' };
-const BINS: Bin[] = [
-  { key: 'exp', label: 'Expired', test: (d) => d < 0, tone: 'danger', filter: 'expired' },
-  { key: '30', label: '≤ 30 d', test: (d) => d >= 0 && d <= 30, tone: 'warn', filter: 'expiring' },
-  { key: '90', label: '31–90 d', test: (d) => d > 30 && d <= 90, tone: 'amber', filter: 'expiring' },
-  { key: '180', label: '3–6 mo', test: (d) => d > 90 && d <= 182, tone: 'calm', filter: 'all' },
-  { key: '365', label: '6–12 mo', test: (d) => d > 182 && d <= 365, tone: 'calm', filter: 'all' },
-  { key: 'later', label: '> 1 yr', test: (d) => d > 365, tone: 'calm', filter: 'all' },
-];
-
-/** How much stock expires when: batches by time to expiry. The first three need action. */
-export function ExpiryChart({ batches, onOpen }: { batches: Batch[]; onOpen: (f: Bin['filter']) => void }) {
-  const live = batches.filter((b) => !b.quarantined && b.qty > 0);
-  const counts = BINS.map((bin) => ({ bin, n: live.filter((b) => bin.test(daysLeft(b.expiry))).length }));
-  const max = Math.max(1, ...counts.map((c) => c.n));
-  const urgent = live.filter((b) => band(b) !== 'ok').length;
-
-  return (
-    <section className="card ph-card ph-chart" aria-label="Expiry outlook">
-      <header className="ph-chart-head">
-        <h2>Expiry outlook</h2>
-        <button className="btn-text" onClick={() => onOpen('expiring')}>{urgent} need action</button>
-      </header>
-      <div className="ph-bars ph-bars--expiry" role="list">
-        {counts.map(({ bin, n }) => (
-          <div key={bin.key} className="ph-bar-col" role="listitem">
-            <span className="ph-bar-track">
-              <button
-                className={`ph-bar ph-bar--${bin.tone}`}
-                style={{ height: `${Math.max(n ? 6 : 0, (n / max) * 100)}%` }}
-                data-tip={`${bin.label}: ${n} batch${n === 1 ? '' : 'es'}`}
-                aria-label={`${bin.label}: ${n} batches`}
-                onClick={() => onOpen(bin.filter)}
-              >
-                <em>{n}</em>
-              </button>
-            </span>
-            <span className="ph-bar-x">{bin.label}</span>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }

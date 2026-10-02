@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Offline voice model (36 MB): fetched by `npm run voice-model`, not kept in git
+public/voice/

@@ -1,13 +1,16 @@
 # SHRI HEALTH Pharmacy Console
 
-Hospital pharmacy workspace for pharmacists: prescription queue, dispensing
-with FEFO batch selection and clinical checks, billing, stock and goods receipt,
-reports, patients, manufacturers, staff and settings.
+Hospital pharmacy workspace for pharmacists: a Dashboard with the prescription
+queue, Needs action, New order and a voice To-do; dispensing with FEFO batch
+selection and clinical checks; billing; inventory;
+reports, patients, staff and settings. Inventory lists each medicine's category and
+manufacturer, and both columns filter by several values at once.
 
 > **Demo build.** All pharmacy data is sample data held in the browser. A page
 > refresh resets it, and there is no login. See *Before live use* below.
 
-The one outside connection is **Order more**, which sends a request to the
+The one outside connection is ordering (**New order** on the Dashboard, and
+**Order more** in Inventory), which sends a request to the
 Indostates Procurement Centre (see below).
 
 Works on phones, tablets and desktops: below 1024px the sidebar becomes a menu
@@ -23,6 +26,8 @@ npm run dev       # http://localhost:5174, development with hot reload
 npm run check     # lint + type-check + build to dist/ (run before every deploy)
 npm run build     # type-check and build to dist/
 npm run preview   # serve dist/ on the local network at port 4174
+npm run voice-model    # once: offline voice model for the Dashboard To-do (~36 MB)
+npm run preview:https  # same, over https at port 4443, so the microphone works
 ```
 
 `dev` and `preview` bind to every network interface, so other machines on the
@@ -36,9 +41,10 @@ EC2: see **[DEPLOY.md](DEPLOY.md)** for the step-by-step guide, and
 [`deploy/nginx-dev-pharmacy.conf`](deploy/nginx-dev-pharmacy.conf) for the
 NGINX config (caching, compression, security headers, procurement route).
 
-## Procurement (Order more)
+## Procurement (New order, Order more)
 
-Order more on the Stock list, or on a medicine's page, sends a new **Pharmacy**
+New order (the Dashboard's order form, `#/order`), or Order more on the Inventory
+list or a medicine's page, sends a new **Pharmacy**
 request to the Procurement Centre, where it appears under *Waiting for vendor*.
 Only the request fields are sent: department, requested by, priority (Urgent
 when the medicine is low), and the item with its quantity. Vendor, price and
@@ -68,9 +74,10 @@ src/
   route.ts          the address (#/stock/clp75 …) so Back/Forward and links work
   data.ts           sample data and rules (FEFO, expiry bands, sales-based
                     low-stock level, allergy and interaction checks, bill maths)
-  procurement.ts    Order more → Procurement Centre request
-  Dashboard.tsx  Queue.tsx  NewRx.tsx  Dispense.tsx  Billing.tsx
-  Stock.tsx  Receive.tsx  Reports.tsx  Patients.tsx  Manufacturers.tsx
+  procurement.ts    New order / Order more → Procurement Centre request
+  Dashboard.tsx (with the prescription queue)  NewOrder.tsx  Todo.tsx
+  NewRx.tsx (#/new)  Dispense.tsx  Billing.tsx  Stock.tsx (Inventory)
+  Reports.tsx  Patients.tsx
   Staff.tsx  Settings.tsx                         one file per screen
   charts.tsx        dashboard charts
   assistant.ts      the Ask helper: answers only from the console's own records

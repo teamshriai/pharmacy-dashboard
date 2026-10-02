@@ -1,19 +1,22 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './design/Icon';
 import {
+  CATEGORIES,
   COVER_DAYS,
   DISPENSE_FROM,
   LEAD_DAYS,
   LOCATIONS,
+  MANUFACTURERS,
   PRODUCTS,
   SAFETY_DAYS,
   band,
+  categoryLabel,
   inr,
-  makerOf,
   monYr,
   productName,
   suggestedOrder,
   type Batch,
+  type Category,
   type Location,
   type Product,
 } from './data';
@@ -82,7 +85,14 @@ function StockList({ store }: { store: Store }) {
 
   const match = (r: (typeof rows)[number], f: StockFilter) =>
     f === 'all' || (f === 'low' && r.low) || (f === 'expiring' && r.expiring) || (f === 'expired' && r.expired);
-  const shown = rows.filter((r) => match(r, store.stockFilter) && (loc === 'All' || r.all.length));
+  // Category and manufacturer: any of the ticked values; nothing ticked means all.
+  const cats = store.stockCats;
+  const makers = store.stockMakers;
+  const picked = rows.filter(
+    (r) => (loc === 'All' || r.all.length) && (!cats.length || cats.includes(r.p.category)) && (!makers.length || makers.includes(store.makerIdOf(r.p.id))),
+  );
+  const shown = picked.filter((r) => match(r, store.stockFilter));
+  const filtering = cats.length > 0 || makers.length > 0;
 
   function removeExpired(p: Product) {
     const done = store.removeExpired(p.id, loc === 'All' ? undefined : loc);
@@ -117,7 +127,7 @@ function StockList({ store }: { store: Store }) {
             >
               <Icon name={f.icon} size={13} />
               {f.label}
-              <span className="ph-chip-count">{rows.filter((r) => match(r, f.key)).length}</span>
+              <span className="ph-chip-count">{picked.filter((r) => match(r, f.key)).length}</span>
             </button>
           ))}
         </div>
@@ -131,14 +141,34 @@ function StockList({ store }: { store: Store }) {
       </div>
 
       {shown.length === 0 ? (
-        <Empty icon="checkCircle" text="No medicines match this filter." />
+        <div className="ph-empty-filter">
+          <Empty icon="checkCircle" text="No medicines match these filters." />
+          {filtering && (
+            <button className="btn-text" onClick={() => { store.setStockCats([]); store.setStockMakers([]); }}>Clear category and manufacturer</button>
+          )}
+        </div>
       ) : (
         <div className="ph-table-wrap">
           <table className="ph-table ph-stock">
             <thead>
               <tr>
                 <th>Medicine</th>
-                <th className="num">Batches</th>
+                <th>
+                  <ColumnFilter
+                    label="Category"
+                    options={CATEGORIES.map((c) => ({ key: c.key as Category, label: c.label, count: PRODUCTS.filter((p) => p.category === c.key).length }))}
+                    selected={cats}
+                    onChange={store.setStockCats}
+                  />
+                </th>
+                <th>
+                  <ColumnFilter
+                    label="Manufacturer"
+                    options={MANUFACTURERS.map((m) => ({ key: m.id, label: m.name, count: PRODUCTS.filter((p) => store.makerIdOf(p.id) === m.id).length }))}
+                    selected={makers}
+                    onChange={store.setStockMakers}
+                  />
+                </th>
                 <th>Stock</th>
                 <th>Next expiry</th>
                 <th>Status</th>
@@ -156,7 +186,18 @@ function StockList({ store }: { store: Store }) {
                     onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && store.openFromList(p.id)}
                   >
                     <td><ProductCell p={p} /></td>
-                    <td className="num">{all.length}</td>
+                    <td><span className="ph-cat">{categoryLabel(p.category)}</span></td>
+                    {/* Choose the maker for this medicine right here; the row itself still opens the medicine. */}
+                    <td className="ph-maker" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      <select
+                        className="ph-maker-select"
+                        value={store.makerIdOf(p.id)}
+                        onChange={(e) => store.setMaker(p.id, e.target.value)}
+                        aria-label={`Manufacturer of ${productName(p)}`}
+                      >
+                        {MANUFACTURERS.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      </select>
+                    </td>
                     <td>
                       <span className="ph-stock-cell">
                         <strong>{qty}</strong>
@@ -182,7 +223,7 @@ function StockList({ store }: { store: Store }) {
                   </tr>
                   {ordering === p.id && (
                     <tr className="ph-order-row">
-                      <td colSpan={6}>
+                      <td colSpan={7}>
                         <OrderForm
                           p={p}
                           inStock={store.stockOf(p.id)}
@@ -204,6 +245,92 @@ function StockList({ store }: { store: Store }) {
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * A column heading that filters by several values at once: click it for a
+ * list of tick boxes. Nothing ticked means every value.
+ */
+function ColumnFilter<T extends string>({ label, options, selected, onChange }: {
+  label: string;
+  options: { key: T; label: string; count: number }[];
+  selected: T[];
+  onChange: (next: T[]) => void;
+}) {
+  // Where the list opens, in window coordinates: the table scrolls sideways, which would clip it.
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
+  const open = at !== null;
+  const wrap = useRef<HTMLSpanElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+
+  function place() {
+    const r = btn.current!.getBoundingClientRect();
+    return { top: r.bottom + 8, left: Math.max(16, Math.min(r.left - 6, window.innerWidth - 256)) };
+  }
+  const show = () => setAt(place());
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setAt(null);
+    // The list stays open while boxes are ticked; if the page scrolls it follows its heading,
+    // and it only closes once the heading has scrolled out of view.
+    const follow = (e: Event) => {
+      if (wrap.current?.contains(e.target as Node)) return;
+      const r = btn.current?.getBoundingClientRect();
+      if (!r || r.bottom < 0 || r.top > window.innerHeight) close();
+      else setAt(place());
+    };
+    const away = (e: MouseEvent) => !wrap.current?.contains(e.target as Node) && close();
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      close();
+      btn.current?.focus();
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    window.addEventListener('scroll', follow, true);
+    window.addEventListener('resize', follow);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+      window.removeEventListener('scroll', follow, true);
+      window.removeEventListener('resize', follow);
+    };
+  }, [open]);
+
+  const toggle = (k: T) => onChange(selected.includes(k) ? selected.filter((x) => x !== k) : [...selected, k]);
+
+  return (
+    <span className="ph-colfilter" ref={wrap}>
+      <button
+        ref={btn}
+        type="button"
+        className={`ph-colfilter-btn ${selected.length ? 'is-on' : ''}`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => (open ? setAt(null) : show())}
+      >
+        {label}
+        {selected.length > 0 && <span className="ph-colfilter-count">{selected.length}</span>}
+        <Icon name="chevron" size={12} />
+      </button>
+      {open && (
+        <div className="ph-colfilter-menu" style={at} role="group" aria-label={`Filter by ${label.toLowerCase()}`}>
+          {options.map((o) => (
+            <label key={o.key} className="ph-colfilter-opt">
+              <input type="checkbox" checked={selected.includes(o.key)} onChange={() => toggle(o.key)} />
+              <span>{o.label}</span>
+              <em>{o.count}</em>
+            </label>
+          ))}
+          <span className="ph-colfilter-foot">
+            <button type="button" className="btn-text" onClick={() => onChange([])} disabled={!selected.length}>Clear</button>
+            <button type="button" className="btn-text" onClick={() => setAt(null)}>Done</button>
+          </span>
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -294,7 +421,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
   const low = inStock < p.reorder;
   const daysLeft = p.perDay ? Math.floor(inStock / p.perDay) : Infinity;
   const perDay = Number.isInteger(p.perDay) ? String(p.perDay) : p.perDay.toFixed(1);
-  const maker = makerOf(p);
+  const maker = store.makerFor(p.id);
 
   const figures = [
     { label: 'In stock', value: String(inStock), sub: LOCATIONS.map((l) => `${l === DISPENSE_FROM ? 'Counter' : 'Store'} ${at(l)}`).join(' · '), tone: low ? 'warn' : '' },
@@ -308,7 +435,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
       <section className="card ph-card ph-prod-page">
         <div className="ph-prod-top">
           <button className="btn-text ph-back" onClick={store.backToStock}>
-            <Icon name="arrow" size={14} />Back to Stock
+            <Icon name="arrow" size={14} />Back to Inventory
           </button>
           <button className="btn btn-primary ph-small-btn" onClick={() => setOrdering(true)} disabled={ordering}>
             <span className="btn-ico"><Icon name="package" size={14} /></span>Order more

@@ -44,9 +44,10 @@ export function packsFor(productId: string, qty: number) {
   return c ? { packs: Math.ceil(qty / c.pack), pack: c.pack } : null;
 }
 
-interface CatalogueItem {
+export interface CatalogueItem {
   id: number;
   sku: string;
+  name: string;
   unit: string;
   /** Procurement's last price per unit: the "Old price" on its requests. */
   price: number;
@@ -105,6 +106,21 @@ export async function oldPrice(productId: string): Promise<{ price: number; unit
   return item && typeof item.price === 'number' ? { price: item.price, unit: item.unit } : null;
 }
 
+/** Procurement's catalogue entry for each of these medicines (SKU, brand, strength, unit, old price). */
+export async function catalogueFor(productIds: string[]): Promise<Record<string, CatalogueItem>> {
+  const items = await catalogue();
+  const out: Record<string, CatalogueItem> = {};
+  for (const id of productIds) {
+    const c = CATALOGUE[id];
+    const item = c && items.find((i) => i.sku === c.sku);
+    if (item) out[id] = item;
+  }
+  return out;
+}
+
+/** How many of our units make one catalogue unit (e.g. 15 tablets per strip). */
+export const packOf = (productId: string) => CATALOGUE[productId]?.pack ?? 1;
+
 export interface SentRequest {
   requestNo: string;
   packs: number;
@@ -113,8 +129,22 @@ export interface SentRequest {
 
 /** Sends one medicine as a new Pharmacy request. Throws with a plain message if it cannot. */
 export async function sendRequest(o: { productId: string; qty: number; urgent: boolean; requestedBy: string }): Promise<SentRequest> {
-  const c = CATALOGUE[o.productId];
-  if (!c) throw new Error(`${productName(productById(o.productId))} is not in the procurement catalogue`);
+  const sent = await sendOrder({ lines: [{ productId: o.productId, qty: o.qty }], urgent: o.urgent, requestedBy: o.requestedBy });
+  return { requestNo: sent.requestNo, packs: sent.lines[0].packs, unit: sent.lines[0].unit };
+}
+
+export interface SentOrder {
+  requestNo: string;
+  lines: { productId: string; qty: number; packs: number; unit: string }[];
+}
+
+/**
+ * Sends several medicines as one Pharmacy request (the New order form).
+ * Quantities are in our units and converted to the catalogue's packs.
+ */
+export async function sendOrder(o: { lines: { productId: string; qty: number }[]; urgent: boolean; requestedBy: string; notes?: string }): Promise<SentOrder> {
+  const missing = o.lines.filter((l) => !CATALOGUE[l.productId]);
+  if (missing.length) throw new Error(`${missing.map((l) => productName(productById(l.productId))).join(', ')} not in the procurement catalogue`);
 
   const [departments, items] = await Promise.all([
     call<{ id: number; name: string }[]>('GET', '/departments'),
@@ -122,15 +152,19 @@ export async function sendRequest(o: { productId: string; qty: number; urgent: b
   ]);
   const dept = departments.find((d) => d.name === DEPARTMENT);
   if (!dept) throw new Error('Procurement has no Pharmacy department');
-  const item = items.find((i) => i.sku === c.sku);
-  if (!item) throw new Error(`${c.sku} is no longer in the procurement catalogue`);
 
-  const packs = Math.ceil(o.qty / c.pack);
+  const lines = o.lines.map((l) => {
+    const c = CATALOGUE[l.productId];
+    const item = items.find((i) => i.sku === c.sku);
+    if (!item) throw new Error(`${c.sku} is no longer in the procurement catalogue`);
+    return { ...l, item, packs: Math.ceil(l.qty / c.pack) };
+  });
   const sent = await call<{ request_no: string }>('POST', '/requests', {
     department_id: dept.id,
     requested_by: o.requestedBy,
     priority: o.urgent ? 'URGENT' : 'NORMAL',
-    items: [{ item_id: item.id, quantity: packs, brand: item.manufacturer ?? '', strength: item.strength ?? '' }],
+    ...(o.notes ? { notes: o.notes } : {}),
+    items: lines.map((l) => ({ item_id: l.item.id, quantity: l.packs, brand: l.item.manufacturer ?? '', strength: l.item.strength ?? '' })),
   });
-  return { requestNo: sent.request_no, packs, unit: item.unit };
+  return { requestNo: sent.request_no, lines: lines.map((l) => ({ productId: l.productId, qty: l.qty, packs: l.packs, unit: l.item.unit })) };
 }

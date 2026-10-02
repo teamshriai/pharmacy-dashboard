@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { pageOf, parseHash, titleOf, toHash, type StockLoc } from './route';
-import { sendRequest, units } from './procurement';
+import { sendOrder, sendRequest, units } from './procurement';
 import {
   BATCHES,
   BILLS,
@@ -8,8 +8,9 @@ import {
   sumBill,
   txnId,
   DISPENSED_EARLIER,
+  MANUFACTURERS,
   PRESCRIPTIONS,
-  SUPPLIERS,
+  PRODUCTS,
   TAT_TARGET_MIN,
   USER,
   band,
@@ -20,6 +21,7 @@ import {
   type Batch,
   type Bill,
   type Payment,
+  type Category,
   type Location,
   type Order,
   type Patient,
@@ -28,41 +30,10 @@ import {
   type RxType,
 } from './data';
 
-export type Section = 'dashboard' | 'queue' | 'billing' | 'stock' | 'receive' | 'reports' | 'patients' | 'manufacturers' | 'staff' | 'settings';
+export type Section = 'dashboard' | 'order' | 'billing' | 'stock' | 'reports' | 'patients' | 'staff' | 'settings';
 export type StockFilter = 'all' | 'low' | 'expiring' | 'expired';
 
 export type Picks = Record<string, { batchId: string; qty: number }[]>;
-
-export interface GrnLine {
-  /** Stable row identity, so removing a row never shifts another row's typed text. */
-  uid: string;
-  productId: string;
-  batchNo: string;
-  mfg: string; // yyyy-mm
-  expiry: string; // yyyy-mm
-  qty: number;
-  free: number;
-  rate: number;
-}
-
-export interface GrnForm {
-  supplier: string;
-  invoice: string;
-  invoiceDate: string;
-  po: string;
-  location: Location;
-  lines: GrnLine[];
-}
-
-export const blankLine = (): GrnLine => ({ uid: 'l' + Date.now() + Math.random().toString(36).slice(2), productId: '', batchNo: '', mfg: '', expiry: '', qty: 0, free: 0, rate: 0 });
-const blankGrn = (): GrnForm => ({
-  supplier: SUPPLIERS[0],
-  invoice: '',
-  invoiceDate: new Date().toISOString().slice(0, 10),
-  po: '',
-  location: 'Main Store',
-  lines: [blankLine()],
-});
 
 const SEED_AUDIT: AuditEvent[] = [
   { id: 'a3', at: plusDays(0), user: 'Kumar', action: 'GRN posted', detail: 'INV-88104 · 4 lines · Main Store' },
@@ -72,6 +43,18 @@ const SEED_AUDIT: AuditEvent[] = [
 SEED_AUDIT[0].at.setHours(9, 55);
 SEED_AUDIT[1].at.setHours(9, 31);
 SEED_AUDIT[2].at.setHours(8, 47);
+
+const MAKERS_KEY = 'shri-pharmacy-makers';
+function loadMakers(): Record<string, string> {
+  const base = Object.fromEntries(PRODUCTS.map((p) => [p.id, p.mfr]));
+  try {
+    const saved = JSON.parse(localStorage.getItem(MAKERS_KEY) ?? '{}');
+    for (const [pid, mid] of Object.entries(saved)) if (pid in base && MANUFACTURERS.some((m) => m.id === mid)) base[pid] = mid as string;
+  } catch {
+    /* defaults */
+  }
+  return base;
+}
 
 const TAT_KEY = 'shri-pharmacy-tat';
 type Tat = typeof TAT_TARGET_MIN;
@@ -87,11 +70,6 @@ function loadTat(): Tat {
   return { ...TAT_TARGET_MIN };
 }
 
-/** End of the given month, from a yyyy-mm input value. */
-const monthEnd = (ym: string) => {
-  const [y, m] = ym.split('-').map(Number);
-  return new Date(y, m, 0);
-};
 
 export function usePharmacyStore() {
   const [initial] = useState(() => {
@@ -104,6 +82,8 @@ export function usePharmacyStore() {
   const [activeRx, setActiveRx] = useState<string | null>(initial.rx);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initial.filter);
   const [stockLoc, setStockLoc] = useState<StockLoc>(initial.loc);
+  const [stockCats, setStockCats] = useState<Category[]>(initial.cats);
+  const [stockMakers, setStockMakers] = useState<string[]>(initial.makers);
   const [focusProduct, setFocusProduct] = useState<string | null>(initial.product);
   /** The list row a medicine was opened from, and the scroll position, so coming back lands on it. */
   const [stockReturn, setStockReturn] = useState<{ id: string; y: number } | null>(null);
@@ -115,8 +95,12 @@ export function usePharmacyStore() {
   const [dispensedToday, setDispensedToday] = useState(DISPENSED_EARLIER);
   /** When each dispense in this session happened, for the hourly chart. */
   const [dispenseTimes, setDispenseTimes] = useState<Date[]>([]);
-  /** The receipt being entered stays put across tabs until it is posted. */
-  const [grn, setGrn] = useState<GrnForm>(blankGrn);
+  /** The medicine New order opens with, when started from a Needs action alert. */
+  const [orderSeed, setOrderSeed] = useState<string | null>(null);
+  function startOrder(productId?: string) {
+    go('order');
+    setOrderSeed(productId ?? null);
+  }
   const [bills, setBills] = useState<Bill[]>(BILLS);
   const [entering, setEntering] = useState(initial.entering);
   /** One-line confirmation shown on the screen an action returns to. */
@@ -124,6 +108,21 @@ export function usePharmacyStore() {
   const [focusBill, setFocusBill] = useState<string | null>(initial.bill);
   const [tat, setTatState] = useState<Tat>(loadTat);
   const [orders, setOrders] = useState<Order[]>([]);
+  /** Which manufacturer each medicine is stocked from; chosen per row in Inventory, kept on this computer. */
+  const [makerChoice, setMakerChoice] = useState<Record<string, string>>(loadMakers);
+  const makerIdOf = (productId: string) => makerChoice[productId] ?? productById(productId).mfr;
+  const makerFor = (productId: string) => MANUFACTURERS.find((m) => m.id === makerIdOf(productId)) ?? MANUFACTURERS[0];
+  function setMaker(productId: string, makerId: string) {
+    if (makerIdOf(productId) === makerId) return;
+    const next = { ...makerChoice, [productId]: makerId };
+    setMakerChoice(next);
+    try {
+      localStorage.setItem(MAKERS_KEY, JSON.stringify(next));
+    } catch {
+      /* kept for this session only */
+    }
+    log('Maker set', `${productName(productById(productId))} · ${MANUFACTURERS.find((m) => m.id === makerId)?.name}`);
+  }
   /** A short pop-up message that closes by itself. */
   const [toast, setToast] = useState<{ id: string; tone: 'ok' | 'error'; title: string; text: string; note?: string } | null>(null);
 
@@ -138,6 +137,25 @@ export function usePharmacyStore() {
       setOrders((list) => [...list, { no: sent.requestNo, productId, qty, supplier: 'Procurement', at: new Date(), by: USER.name }]);
       log('Order placed', `${sent.requestNo} · ${productName(p)} · ${units(sent.packs, sent.unit)} · sent to Procurement`);
       setToast({ id: sent.requestNo, tone: 'ok', title: 'Request sent', text: `${sent.requestNo} · ${units(sent.packs, sent.unit)} · ${productName(p)}` });
+      return true;
+    } catch (e) {
+      setToast({ id: 'err' + Date.now(), tone: 'error', title: 'Request not sent', text: (e as Error).message, note: 'Nothing was ordered. Try again in a moment.' });
+      return false;
+    }
+  }
+  /** New order (Dashboard): several medicines in one Procurement request. */
+  async function placeMultiOrder(lines: { productId: string; qty: number }[], urgent: boolean, extra: { requestedBy?: string; notes?: string } = {}) {
+    try {
+      const sent = await sendOrder({ lines, urgent, requestedBy: extra.requestedBy?.trim() || `${USER.name} (${USER.role})`, notes: extra.notes?.trim() || undefined });
+      const at = new Date();
+      setOrders((list) => [...list, ...sent.lines.map((l) => ({ no: sent.requestNo, productId: l.productId, qty: l.qty, supplier: 'Procurement', at, by: USER.name }))]);
+      log('Order placed', `${sent.requestNo} · ${sent.lines.map((l) => `${productById(l.productId).generic} ${units(l.packs, l.unit)}`).join(', ')} · sent to Procurement`);
+      setToast({
+        id: sent.requestNo,
+        tone: 'ok',
+        title: 'Request sent',
+        text: `${sent.requestNo} · ${sent.lines.length === 1 ? `${units(sent.lines[0].packs, sent.lines[0].unit)} · ${productName(productById(sent.lines[0].productId))}` : `${sent.lines.length} medicines`}`,
+      });
       return true;
     } catch (e) {
       setToast({ id: 'err' + Date.now(), tone: 'error', title: 'Request not sent', text: (e as Error).message, note: 'Nothing was ordered. Try again in a moment.' });
@@ -218,10 +236,10 @@ export function usePharmacyStore() {
     // A dispensed prescription is closed: it can be found, never dispensed twice.
     const r = fresh ?? rxs.find((x) => x.id === id);
     if (!r || r.status === 'Dispensed' || r.status === 'Partial') {
-      go('queue');
+      go('dashboard');
       return;
     }
-    setSectionState('queue');
+    setSectionState('dashboard');
     setActiveRx(id);
     setRxs((list) => list.map((r) => (r.id === id && r.status === 'New' ? { ...r, status: 'Reviewing' } : r)));
   }
@@ -230,7 +248,11 @@ export function usePharmacyStore() {
   function openProduct(productId: string) {
     const within = section === 'stock' && !activeRx && !entering;
     go('stock', within ? undefined : 'all');
-    if (!within) setStockLoc('All');
+    if (!within) {
+      setStockLoc('All');
+      setStockCats([]);
+      setStockMakers([]);
+    }
     setFocusProduct(productId);
   }
 
@@ -305,27 +327,11 @@ export function usePharmacyStore() {
     log('Quarantined', `${productName(productById(bt.productId))} · ${bt.batchNo} · ${reason}`);
   }
 
-  /** Posting is the control point: only now do received batches become stock. */
-  function postGrn(invoice: string, location: Location, lines: GrnLine[]) {
-    const created: Batch[] = lines.map((l, i) => ({
-      id: `g${Date.now()}${i}`,
-      productId: l.productId,
-      batchNo: l.batchNo.trim().toUpperCase(),
-      mfg: monthEnd(l.mfg),
-      expiry: monthEnd(l.expiry),
-      qty: l.qty + l.free,
-      location,
-    }));
-    setBatches((list) => [...list, ...created]);
-    log('GRN posted', `${invoice} · ${lines.length} line${lines.length === 1 ? '' : 's'} · ${location}`);
-    setGrn(blankGrn());
-  }
-
   // ---------------------------------------------------------------- address
   // Each screen has its own address. Changing screen adds a history entry, so
   // browser Back/Forward move between screens; a filter or selection within a
   // screen replaces the entry instead of piling up history.
-  const route = { section, rx: activeRx, entering, filter: stockFilter, loc: stockLoc, product: focusProduct, bill: focusBill };
+  const route = { section, rx: activeRx, entering, filter: stockFilter, loc: stockLoc, cats: stockCats, makers: stockMakers, product: focusProduct, bill: focusBill };
   const hash = toHash(route);
   const lastPage = useRef(pageOf(route));
   const rxsRef = useRef(rxs);
@@ -360,6 +366,8 @@ export function usePharmacyStore() {
       setEntering(r.entering);
       setStockFilter(r.filter);
       setStockLoc(r.loc);
+      setStockCats(r.cats);
+      setStockMakers(r.makers);
       setFocusProduct(r.product);
       setFocusBill(r.bill);
       setFlash('');
@@ -379,11 +387,11 @@ export function usePharmacyStore() {
   return {
     section, go,
     activeRx, openRx, closeRx: () => setActiveRx(null),
-    stockFilter, setStockFilter, stockLoc, setStockLoc,
+    stockFilter, setStockFilter, stockLoc, setStockLoc, stockCats, setStockCats, stockMakers, setStockMakers,
     focusProduct, setFocusProduct, openProduct, openFromList, backToStock, stockReturn,
     batches, stockOf, quarantine, removeExpired,
     rxs, pending, dispense, hold,
-    grn, setGrn, postGrn,
+    orderSeed, startOrder,
     bills, focusBill, setFocusBill, openBill,
     entering, startEntry, cancelEntry: () => setEntering(false), addRx, patients,
     flash, setFlash,
@@ -391,8 +399,11 @@ export function usePharmacyStore() {
     dispenseTimes,
     dispensedToday,
     tat, setTat,
-    orders, placeOrder, onOrder,
+    orders, placeOrder, placeMultiOrder, onOrder,
+    makerIdOf, makerFor, setMaker,
     toast, closeToast: () => setToast(null),
+    /** A pop-up message from any screen (e.g. the to-do list at the end of the day). */
+    notify: (t: { tone: 'ok' | 'error'; title: string; text: string; note?: string }) => setToast({ id: 'n' + Date.now(), ...t }),
   };
 }
 

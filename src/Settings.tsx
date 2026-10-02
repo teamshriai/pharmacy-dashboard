@@ -34,7 +34,7 @@ export function Settings({ store, dark, setDark }: { store: Store; dark: boolean
             {ROUTINE_CHOICES.map((m) => <option key={m} value={m}>{duration(m)}</option>)}
           </select>
         </div>
-        <p className="ph-set-note">Used for the waiting bars, Longest wait and Needs attention.</p>
+        <p className="ph-set-note">Used for the waiting bars, Longest wait and Needs action.</p>
       </section>
 
       <section className="card ph-card ph-set">

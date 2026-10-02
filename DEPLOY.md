@@ -17,11 +17,12 @@ Requires Node.js 20 or newer (`nvm use` picks it up from `.nvmrc`).
 
 ```bash
 npm ci            # exact versions from package-lock.json
+npm run voice-model   # once: downloads the offline voice model (~36 MB) into public/voice/
 npm run check     # lint + type-check + production build into dist/
 ```
 
-The build uses relative asset paths (`base: './'` in `vite.config.ts`), so the
-same `dist/` works at `/dev/pharmacy/`, at the domain root, or anywhere else.
+The build is made for `/dev/pharmacy/` (`base: '/dev/pharmacy/'` in
+`vite.config.ts`); to serve it somewhere else, change `base` and rebuild.
 There are no build-time environment variables to set.
 
 Optional local check before uploading: `npm run preview` serves `dist/` at
@@ -102,6 +103,25 @@ In a browser, open https://www.shri-ai.org/dev/pharmacy/ and check:
 - Night/day mode switches, and a reload keeps your choice.
 - On a phone: the ☰ button opens the menu, and pages don't scroll sideways.
 - Stock → Order more shows "Procurement Centre is not connected yet".
+
+## To-do voice (offline speech)
+
+The Dashboard To-do takes tasks by voice with an offline engine (vosk-browser,
+Indian English model): the microphone is turned into text inside the browser,
+nothing is sent anywhere, and it works in Brave, Firefox, Chrome and Edge.
+
+- The model is not in git. `npm run voice-model` puts it in `public/voice/`, and
+  the build copies it to `dist/voice/`. Without it, voice falls back to the
+  browser's own speech service (Chrome/Edge only, sends audio to Google/Microsoft)
+  or says it is not installed.
+- The build also writes `dist/voice/vosk-worker.js`. The NGINX snippet gives only
+  that file a policy allowing `'unsafe-eval' 'wasm-unsafe-eval'` (the engine needs
+  it); the page itself keeps `script-src 'self'`.
+- Browsers allow the microphone only over https (or localhost), and the snippet's
+  `Permissions-Policy` must keep `microphone=(self)`.
+- On the local network, `npm run preview:https` serves the console at
+  `https://<this-machine's-IP>:4443/dev/pharmacy/` with a self-signed
+  certificate (accept the browser's warning once).
 
 ## Procurement Centre ("Order more")
 

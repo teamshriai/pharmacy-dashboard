@@ -3,23 +3,25 @@ import './design/shell.css';
 import './design/nav.css';
 import './pharmacy.css';
 import { Icon } from './design/Icon';
-import { DISPENSE_FROM, PRODUCTS, USER, band, productName, type RxType } from './data';
+import { DISPENSE_FROM, PRODUCTS, USER, band, productName } from './data';
 import { usePharmacyStore, type Section, type Store } from './store';
 import { Dashboard } from './Dashboard';
-import { Queue } from './Queue';
+import { NewOrder } from './NewOrder';
 import { Dispense } from './Dispense';
 import { Stock } from './Stock';
-import { Receive } from './Receive';
 import { Billing } from './Billing';
 import { NewRx } from './NewRx';
 import { Reports } from './Reports';
 import { Patients } from './Patients';
-import { Manufacturers } from './Manufacturers';
 import { Staff } from './Staff';
 import { Settings } from './Settings';
 import { Status, TypeBadge } from './parts';
 
-const THEME_KEY = 'shri-pharmacy-theme';
+/**
+ * Day (light) is the default. Only a theme someone picks is remembered, under a new
+ * key: the old one was written on every load, so it cannot tell a choice from the default.
+ */
+const THEME_KEY = 'shri-pharmacy-theme-choice';
 /** The SHRI HEALTH ribbon, served from public/ next to the page (works under any sub-path). */
 const LOGO = `${import.meta.env.BASE_URL}favicon-192.png`;
 
@@ -31,10 +33,8 @@ const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
     head: 'Pharmacy',
     items: [
       { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
-      { key: 'queue', label: 'Queue', icon: 'clipboard' },
       { key: 'billing', label: 'Billing', icon: 'receipt' },
-      { key: 'stock', label: 'Stock', icon: 'layers' },
-      { key: 'receive', label: 'Receive', icon: 'package' },
+      { key: 'stock', label: 'Inventory', icon: 'layers' },
     ],
   },
   {
@@ -42,7 +42,6 @@ const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
     items: [
       { key: 'reports', label: 'Reports', icon: 'chart' },
       { key: 'patients', label: 'Patients', icon: 'users' },
-      { key: 'manufacturers', label: 'Manufacturers', icon: 'factory' },
       { key: 'staff', label: 'Staff', icon: 'badge' },
     ],
   },
@@ -53,13 +52,11 @@ const NAV = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS];
 /** One line under each page title, so a first-time user knows what the page is for. */
 const HINT: Record<Section | 'dispense' | 'entry', string> = {
   dashboard: 'Today at a glance.',
-  queue: 'Prescriptions waiting. Select one to start.',
+  order: 'Order medicines from Procurement.',
   billing: 'Every bill and payment today.',
-  stock: 'Stock, low items and expiry.',
-  receive: 'Record a delivery, then add it to stock.',
+  stock: 'Every medicine: stock, category, maker and expiry.',
   reports: "Today's sales, GST and stock value.",
   patients: 'Everyone served today.',
-  manufacturers: 'Medicines by maker, and what is in stock.',
   staff: 'Who is on shift, and what they did today.',
   settings: 'Theme and turnaround targets.',
   dispense: 'Check, pick, pay.',
@@ -68,7 +65,6 @@ const HINT: Record<Section | 'dispense' | 'entry', string> = {
 
 export default function PharmacyApp() {
   const store = usePharmacyStore();
-  const [queueType, setQueueType] = useState<RxType | 'All'>('All');
   useClockTick(30_000);
   const [navOpen, setNavOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -94,44 +90,51 @@ export default function PharmacyApp() {
       button?.focus();
     };
   }, [navOpen]);
-  const [dark, setDark] = useState(() => {
+  const [dark, setDarkState] = useState(() => {
     try {
-      return localStorage.getItem(THEME_KEY) !== 'light';
+      return localStorage.getItem(THEME_KEY) === 'dark';
     } catch {
-      return true;
+      return false;
     }
   });
+  /** A theme picked with the toggle or in Settings: applied and remembered. */
+  const setDark = (next: boolean | ((d: boolean) => boolean)) =>
+    setDarkState((d) => {
+      const v = typeof next === 'function' ? next(d) : next;
+      try {
+        localStorage.setItem(THEME_KEY, v ? 'dark' : 'light');
+      } catch {
+        /* storage unavailable: the choice is simply not remembered */
+      }
+      return v;
+    });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     // The phone's browser bar follows the console's theme, not the device's.
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131b2b' : '#f5f8fc');
-    try {
-      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
-    } catch {
-      /* storage unavailable: the choice is simply not remembered */
-    }
   }, [dark]);
 
   const rx = store.activeRx ? store.rxs.find((r) => r.id === store.activeRx) : undefined;
   const alerts =
     PRODUCTS.filter((p) => store.stockOf(p.id) < p.reorder).length +
     store.batches.filter((b) => !b.quarantined && band(b) === 'expired').length;
-  const counts: Partial<Record<Section, number>> = { queue: store.pending.length, stock: alerts };
+  const counts: Partial<Record<Section, number>> = { dashboard: store.pending.length, stock: alerts };
 
-  const heading = rx ? 'Dispense' : store.entering ? 'New prescription' : NAV.find((n) => n.key === store.section)!.label;
+  const heading = rx ? 'Dispense' : store.entering ? 'New prescription' : store.section === 'order' ? 'New order' : NAV.find((n) => n.key === store.section)!.label;
 
   return (
     <div className="app-shell ph-shell">
       <aside className={`side-nav ${navOpen ? 'is-open' : ''}`}>
         <div className="side-head">
-          <div className="brand">
+          {/* The logo leads back to the SHRI-AI portal the console sits under. */}
+          <a className="brand brand-link" href="https://www.shri-ai.org/dev/" title="SHRI-AI · www.shri-ai.org/dev">
             <img className="brand-mark brand-logo" src={LOGO} alt="" width={36} height={36} />
             <span className="brand-text">
               <span className="brand-name">SHRI HEALTH</span>
               <span className="brand-sub">Pharmacy</span>
             </span>
-          </div>
+          </a>
           <button
             ref={menuButton}
             className="nav-toggle"
@@ -141,7 +144,7 @@ export default function PharmacyApp() {
             aria-label={navOpen ? 'Close menu' : 'Open menu'}
           >
             <Icon name={navOpen ? 'close' : 'menu'} size={18} />
-            {!navOpen && counts.queue ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
+            {!navOpen && counts.dashboard ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
           </button>
         </div>
 
@@ -200,6 +203,10 @@ export default function PharmacyApp() {
                 <span className="user-role">{DISPENSE_FROM}</span>
               </span>
             </div>
+            {/* The hospital group's site; opens in a new tab so the console stays open. */}
+            <a className="ph-partner" href="https://indostates.com/" target="_blank" rel="noopener noreferrer" title="Indo States Health · indostates.com">
+              <img src={`${import.meta.env.BASE_URL}indostates-logo.png`} alt="Indo States Health" width={170} height={39} />
+            </a>
           </div>
         </header>
 
@@ -212,20 +219,16 @@ export default function PharmacyApp() {
             <NewRx store={store} />
           ) : store.section === 'dashboard' ? (
             <Dashboard store={store} />
-          ) : store.section === 'queue' ? (
-            <Queue store={store} type={queueType} setType={setQueueType} />
+          ) : store.section === 'order' ? (
+            <NewOrder store={store} />
           ) : store.section === 'billing' ? (
             <Billing store={store} />
           ) : store.section === 'stock' ? (
             <Stock store={store} />
-          ) : store.section === 'receive' ? (
-            <Receive store={store} />
           ) : store.section === 'reports' ? (
             <Reports store={store} />
           ) : store.section === 'patients' ? (
             <Patients store={store} />
-          ) : store.section === 'manufacturers' ? (
-            <Manufacturers store={store} />
           ) : store.section === 'staff' ? (
             <Staff store={store} />
           ) : (

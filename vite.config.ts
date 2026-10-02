@@ -1,24 +1,64 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import basicSsl from '@vitejs/plugin-basic-ssl'
+import { defineConfig, type Plugin } from 'vite'
+import { readFileSync } from 'node:fs'
 
 // The Procurement Centre that "Order more" sends requests to, in development only.
 // `npm run dev` / `preview` forward /procurement-api/* to its /api/*; in production
 // NGINX does the same (see deploy/nginx-dev-pharmacy.conf).
 const PROCUREMENT_URL = process.env.PROCUREMENT_URL ?? 'http://localhost:4000'
-const proxy = {
-  '/procurement-api': {
-    target: PROCUREMENT_URL,
-    changeOrigin: true,
-    rewrite: (path: string) => path.replace(/^\/procurement-api/, '/api'),
-  },
+// The page lives at /dev/pharmacy/, so its relative procurement-api calls arrive there.
+const procurement = {
+  target: PROCUREMENT_URL,
+  changeOrigin: true,
+  rewrite: (path: string) => path.replace(/^(\/dev\/pharmacy)?\/procurement-api/, '/api'),
+}
+const proxy = { '/dev/pharmacy/procurement-api': procurement, '/procurement-api': procurement }
+
+// HTTPS=1 serves dev/preview over https with a self-signed certificate, so the
+// microphone (To-do voice) works from other machines on the network. Browsers
+// warn about the certificate once; production uses the server's real one.
+const https = process.env.HTTPS === '1'
+
+/**
+ * The To-do's offline speech engine (vosk-browser) ships its worker inlined and
+ * starts it from a blob: URL. Its WebAssembly glue builds functions from strings,
+ * which needs 'unsafe-eval'. Rather than allow that for the whole page, the build
+ * writes the same worker out as voice/vosk-worker.js, the app starts it from there,
+ * and only that file is served with the looser policy (deploy/nginx-dev-pharmacy.conf).
+ */
+function voskWorker(): Plugin {
+  const source = () => {
+    const js = readFileSync(new URL('./node_modules/vosk-browser/dist/vosk.js', import.meta.url), 'utf8')
+    const marker = "createBase64WorkerFactory('"
+    const start = js.indexOf(marker) + marker.length
+    const end = js.indexOf("'", start)
+    if (start < marker.length || end < 0) throw new Error('vosk-browser: inlined worker not found')
+    const b64 = js.slice(start, end)
+    const text = Buffer.from(b64, 'base64').toString('utf8')
+    return text.substring(text.indexOf('\n', 10) + 1) // as vosk-browser does: drop its first line
+  }
+  return {
+    name: 'vosk-worker',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'voice/vosk-worker.js', source: source() })
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.endsWith('/voice/vosk-worker.js')) return next()
+        res.setHeader('Content-Type', 'application/javascript')
+        res.end(source())
+      })
+    },
+  }
 }
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  // Relative asset URLs, so the same dist/ works at the domain root or under a
-  // sub-path such as /dev/pharmacy/. Routing is hash-based, so no rewrites needed.
-  base: 'dev/pharmacy',
+  plugins: [react(), voskWorker(), ...(https ? [basicSsl()] : [])],
+  // The console is served at /dev/pharmacy/ (see DEPLOY.md). Leading and trailing slashes
+  // matter: without them the logo and the procurement link resolved to the wrong path.
+  base: '/dev/pharmacy/',
   build: {
     sourcemap: false,
     // Emit every font as a file rather than inlining small ones as data: URIs,

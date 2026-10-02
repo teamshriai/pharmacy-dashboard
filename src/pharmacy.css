@@ -46,7 +46,7 @@
 :where(.ph-shell) .card {
   background: linear-gradient(180deg, var(--card-tint), var(--glass-fill-strong) 140px) var(--glass-fill-strong);
 }
-/* Needs attention carries a faint warm wash while it has something to show. */
+/* Needs action carries a faint warm wash while it has something to show. */
 :where(.ph-shell) .ph-attn:has(.ph-attn-icon.is-on) {
   background: linear-gradient(180deg, var(--warn-soft), var(--glass-fill-strong) 160px) var(--glass-fill-strong);
 }
@@ -940,15 +940,12 @@ tr.is-picked .ph-order {
   color: var(--ink);
 }
 /* Typed quantities, no spinner arrows crowding the digits. */
-.ph-pick,
-.ph-grn input[type='number'] {
+.ph-pick {
   -moz-appearance: textfield;
   appearance: textfield;
 }
 .ph-pick::-webkit-inner-spin-button,
-.ph-pick::-webkit-outer-spin-button,
-.ph-grn input[type='number']::-webkit-inner-spin-button,
-.ph-grn input[type='number']::-webkit-outer-spin-button {
+.ph-pick::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -1295,71 +1292,19 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   font-size: 12px;
 }
 
-/* ---------- Receive (GRN) ---------- */
-.ph-grn-head {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr 0.9fr 0.9fr auto;
-  gap: 14px;
-  align-items: end;
-}
+/* ---------- Small buttons, close, confirmations ---------- */
+
 .ph-small-btn {
   min-height: 34px;
   padding: 0 14px;
   font-size: 13px;
 }
-.ph-grn td {
-  padding: 6px 5px;
-  vertical-align: top;
-}
-.ph-grn .field-input {
-  min-height: 36px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  font-size: 13px;
-}
-.ph-grn td:nth-child(1) { min-width: 210px; }
-.ph-grn td:nth-child(2) { min-width: 104px; }
-.ph-grn td:nth-child(3),
-.ph-grn td:nth-child(4) { min-width: 138px; }
-/* A minimum on the boxes themselves (Firefox ignores min-width on table cells), so a narrow
-   screen scrolls the table sideways instead of crushing the numbers. */
-.ph-grn td:nth-child(5),
-.ph-grn td:nth-child(6),
-.ph-grn td:nth-child(7) { width: 84px; }
-.ph-grn td:nth-child(5) .field-input,
-.ph-grn td:nth-child(6) .field-input,
-.ph-grn td:nth-child(7) .field-input {
-  min-width: 84px;
-  padding: 0 9px;
-  /* Quantities and rates are typed; the spinner arrows only take room. */
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-.ph-grn .field-input::-webkit-inner-spin-button,
-.ph-grn .field-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.ph-grn td:nth-child(8) {
-  padding-top: 14px;
-  white-space: nowrap;
-}
-.ph-grn .field-input.num {
-  text-align: right;
-}
+
 .field-input.is-bad {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);
 }
-.ph-field-warn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--warn);
-}
+
 .ph-x {
   display: inline-flex;
   margin-top: 6px;
@@ -1371,112 +1316,6 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
 .ph-x:hover {
   background: var(--danger-soft);
   color: var(--danger);
-}
-/* Tablet portrait and phones: each received batch becomes its own card with
-   labelled fields, instead of a 1000px-wide row of inputs. */
-@media (max-width: 768px) {
-  .ph-table-wrap:has(> .ph-grn) {
-    overflow: visible;
-    background: none;
-    margin: 0;
-  }
-  .ph-grn,
-  .ph-grn tbody {
-    display: block;
-  }
-  .ph-grn thead {
-    display: none;
-  }
-  .ph-grn tr {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px;
-    margin-bottom: 12px;
-    padding: 14px 14px 12px;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    background: var(--glass-fill);
-  }
-  .ph-grn tr.has-err {
-    border-color: var(--danger);
-  }
-  .ph-grn td {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0 !important;
-    width: auto !important;
-    padding: 0;
-    border: 0;
-    text-align: left;
-  }
-  .ph-grn td[data-label]::before {
-    content: attr(data-label);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-  }
-  .ph-grn td:nth-child(1) {
-    grid-column: 1 / -1;
-    padding-right: 48px;
-  }
-  .ph-grn td .field-input {
-    width: 100% !important;
-  }
-  .ph-grn td.num {
-    align-self: end;
-    font-weight: 700;
-  }
-  .ph-grn td.ph-grn-x {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-  }
-}
-
-.ph-grn-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--glass-hairline);
-}
-.ph-grn-sum {
-  display: flex;
-  gap: 26px;
-  margin: 0;
-}
-.ph-grn-sum div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ph-grn-sum dt {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.ph-grn-sum dd {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.ph-grn-note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
 }
 .ph-posted {
   display: flex;
@@ -1632,9 +1471,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   .ph-patient > .ph-checks {
     grid-row: 2 / span 3;
   }
-  .ph-grn-head {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }}
+  }
 @media (max-width: 1023.98px) {
   .ph-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1666,9 +1503,7 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   .ph-results {
     min-width: 0;
   }
-  .ph-grn-head {
-    grid-template-columns: minmax(0, 1fr);
-  }}
+  }
 @media (max-width: 480px) {
   .ph-kpi {
     padding: 12px;
@@ -3021,9 +2856,6 @@ button.ph-metric:hover {
   font-weight: 700;
   color: var(--ink);
 }
-.ph-bars--expiry {
-  margin-bottom: 0;
-}
 /* Thirty columns: narrower bars, 1px gaps, values only on today and the peak. */
 .ph-bars--month {
   gap: 1px;
@@ -3042,14 +2874,6 @@ button.ph-metric:hover {
     visibility: hidden;
   }
 }
-.ph-bars--expiry .ph-bar {
-  cursor: pointer;
-}
-.ph-bar--danger { background: var(--danger); }
-.ph-bar--warn { background: var(--warn); }
-/* Urgency fades left to right: solid red, solid amber, lighter amber, grey. */
-.ph-bar--amber { background: color-mix(in srgb, var(--warn) 45%, transparent); }
-.ph-bar--calm { background: color-mix(in srgb, var(--ink-3) 38%, transparent); }
 
 /* Chart header tools: Today / Week toggle, then the total. */
 .ph-chart-tools {
@@ -3182,7 +3006,6 @@ button.ph-metric:hover {
   background: var(--pay);
 }
 
-
 @media (max-width: 1280px) {
   .ph-charts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3280,98 +3103,6 @@ button.ph-metric:hover {
 }
 .ph-people-open--warn {
   background: var(--warn-soft);
-  color: var(--warn);
-}
-
-/* Manufacturers: a row per maker, its medicines open beneath it. */
-.ph-mfr-note {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 12px;
-  font-size: 12.5px;
-  color: var(--ink-3);
-}
-.ph-mfr-name {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.ph-mfr-name > span:last-child {
-  display: flex;
-  flex-direction: column;
-}
-.ph-mfr-name > span:last-child span {
-  font-size: 12px;
-  color: var(--ink-3);
-}
-.ph-mfr-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--tone-teal) 13%, transparent);
-  color: var(--tone-teal);
-}
-.ph-mfr-chev {
-  width: 32px;
-  color: var(--ink-3);
-}
-.ph-mfr-chev svg {
-  transform: rotate(-90deg);
-  transition: transform 0.2s var(--ease);
-}
-tr.is-open .ph-mfr-chev svg {
-  transform: none;
-}
-.ph-table tbody tr.ph-mfr-detail {
-  background: var(--glass-fill-muted);
-}
-.ph-mfr-detail > td {
-  padding: 6px 10px 10px 55px;
-}
-.ph-mfr-meds {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.ph-mfr-meds button {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--glass-fill-strong);
-  font: inherit;
-  font-size: 12.5px;
-  text-align: left;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: border-color 0.2s var(--ease);
-}
-.ph-mfr-meds button:hover {
-  border-color: var(--butter);
-}
-.ph-mfr-meds button > span:first-child {
-  display: flex;
-  flex-direction: column;
-}
-.ph-mfr-meds button > span:first-child span {
-  color: var(--ink-3);
-}
-.ph-mfr-meds strong {
-  color: var(--ink);
-}
-.ph-mfr-low {
-  font-weight: 700;
   color: var(--warn);
 }
 
@@ -3904,4 +3635,917 @@ tr.is-open .ph-mfr-chev svg {
     overflow: visible;
     background: none;
   }
+}
+
+/* ==========================================================================
+   Inventory: Category and Manufacturer columns, each with a multi-select filter
+   ========================================================================== */
+.ph-cat {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--glass-inset);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.ph-maker {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ph-colfilter {
+  position: relative;
+  display: inline-block;
+}
+/* Looks like a control, not plain heading text, so it is clear it can be clicked. */
+.ph-colfilter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  margin: -4px 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  background: var(--glass-fill-strong);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ph-colfilter-btn:hover,
+.ph-colfilter-btn[aria-expanded='true'] {
+  background: var(--glass-fill-hover);
+  color: var(--ink);
+}
+.ph-colfilter-btn.is-on {
+  border-color: color-mix(in srgb, var(--butter) 45%, var(--glass-border));
+  background: var(--butter-soft);
+  color: var(--butter);
+}
+.ph-colfilter-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--butter);
+  color: var(--brand-on);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+.ph-colfilter-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-fill-strong);
+  box-shadow: var(--shadow-lift);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.ph-colfilter-opt {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ph-colfilter-opt:hover {
+  background: var(--glass-fill-hover);
+}
+.ph-colfilter-opt input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--butter);
+}
+.ph-colfilter-opt em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ph-colfilter-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px 2px;
+  margin-top: 4px;
+  border-top: 1px solid var(--glass-hairline);
+}
+.ph-empty-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 14px;
+}
+
+/* ==========================================================================
+   Dashboard to-do: voice or typed tasks; tick to remove; red once overdue
+   ========================================================================== */
+.ph-todo {
+  --todo-accent: var(--butter);
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(420px 160px at 100% 0%, color-mix(in srgb, var(--tone-teal) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--butter) 7%, var(--glass-fill-strong)), var(--glass-fill-strong) 120px);
+}
+.ph-todo.has-high {
+  --todo-accent: var(--danger);
+}
+.ph-todo-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+}
+.ph-todo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-teal) 70%, var(--butter)));
+  color: #fff;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--butter) 70%, transparent);
+}
+.ph-todo-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.ph-todo-title h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.ph-todo-title > span {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ph-todo-count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--butter-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--butter);
+}
+.ph-todo-high-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+:root[data-theme='dark'] .ph-todo-high-count {
+  color: #1a0d0d;
+}
+
+/* Speak: a clear, friendly control; red and pulsing while listening. */
+.ph-mic {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-teal) 60%, var(--butter)));
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--butter) 75%, transparent);
+  transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
+}
+:root[data-theme='dark'] .ph-mic {
+  color: var(--brand-on);
+}
+.ph-mic:hover {
+  transform: translateY(-1px);
+}
+.ph-mic:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.ph-mic.is-on {
+  background: var(--danger);
+  color: #fff;
+  animation: ph-mic-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ph-mic-pulse {
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--danger) 18%, transparent); }
+}
+
+/* Today's progress */
+.ph-todo-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ph-todo-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--glass-inset);
+}
+.ph-todo-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--tone-teal)));
+  transition: width 0.4s var(--ease);
+}
+.ph-todo-progress-text {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+.ph-todo-progress-text strong {
+  color: var(--ok);
+}
+
+/* Add a task */
+.ph-todo-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 5px 5px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-fill-strong);
+  box-shadow: var(--shadow-xs);
+}
+.ph-todo-add:focus-within {
+  border-color: var(--butter);
+  box-shadow: var(--ring);
+}
+.ph-todo-add input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.ph-todo-add .btn-text {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--butter-soft);
+  font-weight: 700;
+}
+.ph-todo-add .btn-text:disabled {
+  background: transparent;
+}
+.ph-todo-heard {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink);
+}
+.ph-todo-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: ph-mic-pulse 1.4s ease-in-out infinite;
+}
+.ph-todo-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  font-size: 12px;
+  color: var(--warn);
+}
+.ph-todo-problem span {
+  flex: 1;
+}
+
+/* Empty */
+.ph-todo-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 16px 0 6px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.ph-todo-empty strong {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.ph-todo-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+/* Tasks */
+.ph-todo-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0 2px 2px 0;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+}
+.ph-todo-list li {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 10px;
+  background: var(--glass-fill-strong);
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.ph-todo-list li:hover {
+  border-color: var(--glass-border);
+  box-shadow: var(--shadow-xs);
+}
+/* A round tick that fills green when pressed. */
+.ph-todo-list input {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  border: 2px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--glass-fill-strong);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.ph-todo-list input:hover {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+.ph-todo-list input:checked {
+  border-color: var(--ok);
+  background: var(--ok);
+}
+.ph-todo-list input:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.ph-todo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ph-todo-text em {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.ph-todo-via {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--butter-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--butter);
+}
+.ph-todo-list li .ph-x {
+  opacity: 0.45;
+  transition: opacity 0.15s var(--ease);
+}
+.ph-todo-list li:hover .ph-x,
+.ph-todo-list li .ph-x:focus-visible {
+  opacity: 1;
+}
+.ph-todo-list li.is-high {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--glass-border));
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+}
+.ph-todo-list li.is-high strong {
+  color: var(--danger);
+}
+.ph-todo-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.ph-todo-foot .btn-text {
+  margin-left: auto;
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-mic.is-on,
+  .ph-todo-dot {
+    animation: none;
+  }
+}
+
+/* Per-medicine manufacturer: a compact dropdown in the row. */
+.ph-maker-select {
+  width: 172px;
+  max-width: 100%;
+  padding: 5px 26px 5px 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  background: var(--glass-fill-strong) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6.5 9.5l5.5 5.5 5.5-5.5'/%3E%3C/svg%3E") no-repeat right 8px center;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+}
+.ph-maker-select:hover {
+  border-color: var(--line-2);
+}
+.ph-maker-select:focus-visible {
+  outline: none;
+  border-color: var(--butter);
+  box-shadow: var(--ring);
+}
+
+.ph-todo-problem a {
+  font-weight: 600;
+  color: var(--butter);
+  word-break: break-all;
+}
+
+/* ==========================================================================
+   Dashboard prescription queue: fixed height, every order scrolls inside it.
+   The scrollbar stays out of the way: hairline-thin, and only tinted on hover.
+   ========================================================================== */
+.ph-wq-scroll {
+  --wq-height: 298px;
+  max-height: var(--wq-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s var(--ease);
+}
+.ph-wq-scroll:hover,
+.ph-wq-scroll:focus-visible {
+  scrollbar-color: color-mix(in srgb, var(--ink-3) 35%, transparent) transparent;
+}
+.ph-wq-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ph-wq-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ph-wq-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+.ph-wq-scroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-3) 35%, transparent);
+}
+.ph-wq-scroll:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--butter) 40%, transparent);
+}
+/* The column heads stay put while the rows move under them. */
+.ph-wq-scroll .ph-wq thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--glass-fill-strong);
+}
+/* A soft fade says "more below/above" without a visible bar. The top fade starts
+   under the sticky column heads (34px) so they stay fully readable. */
+.ph-wq-scroll {
+  --wq-top: linear-gradient(to bottom, #000 33px, rgb(0 0 0 / 0.12) 34px, #000 64px);
+  --wq-bottom: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.ph-wq-scroll.more-below {
+  -webkit-mask-image: var(--wq-bottom);
+  mask-image: var(--wq-bottom);
+}
+.ph-wq-scroll.more-above:not(.more-below) {
+  -webkit-mask-image: var(--wq-top);
+  mask-image: var(--wq-top);
+}
+.ph-wq-scroll.more-above.more-below {
+  -webkit-mask-image: var(--wq-top), var(--wq-bottom);
+  mask-image: var(--wq-top), var(--wq-bottom);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-wq-scroll {
+    scroll-behavior: auto;
+  }
+}
+
+/* Patients already served today, under the waiting ones: quieter, with the time it was done. */
+.ph-wq tbody tr.ph-wq-done td {
+  color: var(--ink-2);
+}
+.ph-wq tbody tr.ph-wq-done .ph-avatar {
+  opacity: 0.75;
+}
+.ph-wq-donetime {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ok);
+}
+.ph-wq-none td {
+  padding: 14px 10px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* Right of the queue: Needs action, with New prescription right under it. */
+.ph-dash-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  /* As tall as the queue beside it, so the button's bottom lines up with the queue's. */
+  align-self: stretch;
+}
+.ph-dash-side .ph-attn {
+  flex: 1;
+}
+.ph-new-order {
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  border-radius: var(--radius);
+  font-size: 14.5px;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--butter) 80%, transparent);
+}
+
+/* Indo States Health logo, far right of the top bar; links to indostates.com. */
+.ph-partner {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 3px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.ph-partner:hover {
+  border-color: var(--butter);
+  box-shadow: var(--shadow-xs);
+}
+.ph-partner:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.ph-partner img {
+  display: block;
+  width: auto;
+  height: 36px;
+}
+@media (max-width: 760px) {
+  .ph-partner img {
+    height: 28px;
+  }
+}
+
+
+/* Shimmer: a soft band of light sweeps across the Indo States logo every few seconds. */
+.ph-partner::after {
+  content: '';
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 42%;
+  background: linear-gradient(105deg, transparent 0%, rgb(255 255 255 / 0) 20%, rgb(255 255 255 / 0.85) 50%, rgb(255 255 255 / 0) 80%, transparent 100%);
+  transform: translateX(-130%) skewX(-18deg);
+  pointer-events: none;
+  animation: ph-shimmer 4.5s ease-in-out 1.2s infinite;
+}
+@keyframes ph-shimmer {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  38%, 100% { transform: translateX(360%) skewX(-18deg); }
+}
+.ph-partner:hover::after {
+  animation-duration: 1.6s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-partner::after {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   New order: the Pharmacy's official order form to Procurement (#/order)
+   ========================================================================== */
+.ph-po-form {
+  padding: 18px 22px 20px;
+}
+.ph-po-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ph-po-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--butter-soft);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--butter);
+}
+.ph-po-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--ink);
+}
+.ph-po-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.ph-po-head p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.ph-po-no {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 12.5px;
+}
+.ph-po-no em {
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ph-po-no strong {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.ph-po-meta {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr 1.2fr;
+  gap: 12px 14px;
+  margin-bottom: 18px;
+}
+.ph-po-meta .field {
+  margin: 0;
+}
+.ph-po-meta .field-input[readonly] {
+  background: var(--glass-fill-muted);
+  color: var(--ink-2);
+}
+.ph-po-prio {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--glass-fill-strong);
+}
+.ph-po-prio button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.ph-po-prio button.is-on {
+  background: var(--butter);
+  color: var(--brand-on);
+}
+.ph-po-prio button.is-urgent.is-on {
+  background: var(--danger);
+  color: #fff;
+}
+.ph-po-hint {
+  font-size: 11.5px;
+  color: var(--danger);
+}
+.ph-po-table th {
+  white-space: nowrap;
+}
+.ph-po-table td {
+  vertical-align: top;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.ph-po-item {
+  min-width: 250px;
+}
+.ph-po-item .field-input {
+  min-height: 36px;
+}
+.ph-po-cat {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.ph-po-qty {
+  width: 82px;
+  min-height: 36px;
+  padding: 0 9px;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.ph-po-qty::-webkit-inner-spin-button,
+.ph-po-qty::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ph-po-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ph-po-low {
+  font-weight: 700;
+  color: var(--warn);
+}
+.ph-po-low em {
+  font-style: normal;
+}
+.ph-po-table tfoot td {
+  padding-top: 12px;
+  border-top: 1px solid var(--line-2);
+  border-bottom: 0;
+  vertical-align: middle;
+}
+.ph-po-total-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ph-po-total {
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--ink);
+}
+.ph-neworder-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ph-po-form .ph-po-note {
+  margin: 10px 0 0;
+}
+.ph-po-notes {
+  margin: 16px 0 0;
+}
+.ph-po-notes textarea {
+  min-height: 60px;
+  padding: 10px 14px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13.5px;
+}
+.ph-po-notes em {
+  font-style: normal;
+  color: var(--ink-3);
+}
+.ph-po-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-hairline);
+}
+.ph-po-summary {
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.ph-po-summary strong {
+  color: var(--ink);
+}
+.ph-po-summary strong.ph-po-urgent {
+  color: var(--danger);
+}
+@media (max-width: 900px) {
+  .ph-po-meta {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ph-po-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ph-po-no {
+    align-items: flex-start;
+  }
+}
+
+/* The SHRI logo is a link to the portal; it keeps the brand's look. */
+.brand-link {
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s var(--ease);
+}
+.brand-link:hover {
+  background: var(--glass-fill-hover);
+}
+.brand-link:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }

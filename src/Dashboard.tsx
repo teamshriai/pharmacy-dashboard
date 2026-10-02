@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './design/Icon';
 import {
   PRODUCTS,
@@ -9,10 +9,12 @@ import {
   productName,
   turnaround,
   type RxStatus,
+  type RxType,
 } from './data';
 import { detectAlerts, type Alert } from './alerts';
 import { Assistant } from './Assistant';
-import { FootprintsChart, ExpiryChart, TodayReport } from './charts';
+import { FootprintsChart, TodayReport } from './charts';
+import { TodoCard } from './Todo';
 import { Avatar, Empty, Stat, Status, StockGauge, TypeBadge } from './parts';
 import type { Store } from './store';
 
@@ -36,6 +38,14 @@ export function Dashboard({ store }: { store: Store }) {
   const active = store.pending.filter((r) => r.status !== 'On hold');
   const stat = active.filter((r) => r.stat).length;
   const queue = [...store.pending].sort(byUrgency);
+  /**
+   * Everyone already served today, below the waiting ones, newest first: each
+   * bill (one per dispensed prescription), so the box shows every patient of the day.
+   */
+  const ENC: Record<string, RxType> = { Outpatient: 'OP', Inpatient: 'IP', Emergency: 'Emergency' };
+  const served = [...store.bills]
+    .sort((a, z) => z.at.getTime() - a.at.getTime())
+    .map((b) => ({ bill: b, type: store.rxs.find((r) => r.id === b.rxId)?.type ?? ENC[b.patient.encounter] }));
   const longest = active.map(turnaround).sort((a, z) => z.waited - a.waited)[0];
   const collected = store.bills.filter((b) => b.status === 'Paid').reduce((n, b) => n + b.total, 0);
   const alerts = detectAlerts(store);
@@ -46,11 +56,30 @@ export function Dashboard({ store }: { store: Store }) {
     .sort((a, z) => a.qty / a.p.reorder - z.qty / z.p.reorder);
 
   const flow: { icon: IconName; label: string; value: number; stat?: number; go: () => void }[] = [
-    { icon: 'clipboard', label: 'Waiting', value: count('New'), stat: stat || undefined, go: () => store.go('queue') },
-    { icon: 'search', label: 'Checking', value: count('Reviewing'), go: () => store.go('queue') },
-    { icon: 'pause', label: 'On hold', value: count('On hold'), go: () => store.go('queue') },
+    { icon: 'clipboard', label: 'Waiting', value: count('New'), stat: stat || undefined, go: () => toQueue },
+    { icon: 'search', label: 'Checking', value: count('Reviewing'), go: () => toQueue },
+    { icon: 'pause', label: 'On hold', value: count('On hold'), go: () => toQueue },
     { icon: 'checkCircle', label: 'Done today', value: store.dispensedToday, go: () => store.go('billing') },
   ];
+
+  // Soft fades at the top/bottom edge of the queue only while there is more to scroll to.
+  const scroller = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ top: true, end: true });
+  const measure = () => {
+    const el = scroller.current;
+    if (!el) return;
+    const top = el.scrollTop <= 1;
+    const end = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    setEdge((e) => (e.top === top && e.end === end ? e : { top, end }));
+  };
+  useLayoutEffect(measure, [queue.length, served.length]);
+
+  /** The waiting counts point at the queue box on this page. */
+  const toQueue = () => {
+    const box = document.getElementById('rx-queue');
+    box?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    box?.querySelector<HTMLElement>('.ph-wq-scroll')?.focus({ preventScroll: true });
+  };
 
   function act(a: Alert) {
     const x = a.action;
@@ -58,7 +87,7 @@ export function Dashboard({ store }: { store: Store }) {
     if (x.kind === 'quarantine') store.quarantine(x.ref, 'Expired');
     else if (x.kind === 'open') store.openRx(x.ref);
     else if (x.kind === 'stock') store.openProduct(x.ref);
-    else store.go('receive');
+    else store.startOrder(x.ref);
   }
 
   return (
@@ -92,19 +121,34 @@ export function Dashboard({ store }: { store: Store }) {
       </section>
 
       {/* ---------------------------------------------------- work + alerts */}
+      {/* Above the queue, not inside it, so the box keeps its size. */}
+      {store.flash && (
+        <div className="ph-posted ph-posted--inline" role="status">
+          <Icon name="checkCircle" size={16} />
+          <span><strong>{store.flash}</strong>Pharmacist verification happens at dispensing.</span>
+          <button className="ph-x" onClick={() => store.setFlash('')} aria-label="Dismiss"><Icon name="close" size={14} /></button>
+        </div>
+      )}
       <div className="ph-dash">
-        <section className="card ph-card ph-panel">
+        <section className="card ph-card ph-panel" id="rx-queue">
           <header className="ph-panel-head">
             <span>
               <h2>Prescription queue</h2>
-              <p>{queue.length} open · STAT first</p>
+              <p>{queue.length} waiting · STAT first{served.length > 0 && ` · ${served.length} done today`}</p>
             </span>
           </header>
 
-          {queue.length === 0 ? (
+          {queue.length === 0 && served.length === 0 ? (
             <Empty icon="checkCircle" text="Nothing waiting." />
           ) : (
-            <div className="ph-table-wrap">
+            // Fixed height: the first rows show, the rest scroll inside the box.
+            <div
+              ref={scroller}
+              className={`ph-table-wrap ph-wq-scroll ${edge.top ? '' : 'more-above'} ${edge.end ? '' : 'more-below'}`}
+              onScroll={measure}
+              tabIndex={0}
+              aria-label={`Prescription queue, ${queue.length} waiting, ${served.length} done today`}
+            >
               <table className="ph-table ph-wq">
                 <thead>
                   <tr>
@@ -125,6 +169,8 @@ export function Dashboard({ store }: { store: Store }) {
                           <span className="ph-prio">
                             {r.stat ? <Stat /> : <span className="ph-muted">Routine</span>}
                             {r.status !== 'New' && <Status status={r.status} />}
+                            {/* Why it is on hold, e.g. "Query to prescriber". */}
+                            {r.note && <span className="ph-note">{r.note}</span>}
                           </span>
                         </td>
                         <td>
@@ -147,46 +193,79 @@ export function Dashboard({ store }: { store: Store }) {
                       </tr>
                     );
                   })}
+                  {queue.length === 0 && (
+                    <tr className="ph-wq-none"><td colSpan={5}><Icon name="checkCircle" size={14} /> Nothing waiting.</td></tr>
+                  )}
+                  {served.map(({ bill: b, type }) => (
+                    <tr
+                      key={b.no}
+                      className="is-link ph-wq-done"
+                      onClick={() => store.openBill(b.no)}
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && store.openBill(b.no)}
+                      title="Open the bill"
+                    >
+                      <td><span className="ph-status ph-status--ok"><Icon name="checkCircle" size={12} />Done</span></td>
+                      <td>
+                        <span className="ph-patient-cell">
+                          <Avatar name={b.patient.name} type={type} />
+                          <span>
+                            <strong>{b.patient.name}</strong>
+                            <span className="mono">{b.patient.mrn}</span>
+                          </span>
+                        </span>
+                      </td>
+                      <td>{b.patient.encounter === 'Outpatient' ? 'OPD' : placeOf(b.patient)}</td>
+                      <td><TypeBadge type={type} /></td>
+                      <td><span className="ph-wq-donetime">Done {hhmm(b.at)}</span></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
         </section>
 
-        <section className="card ph-card ph-attn" aria-label="Needs attention">
-          <div className="ph-attn-head">
-            <span className={`ph-attn-icon ${alerts.length ? 'is-on' : ''}`}><Icon name={alerts.length ? 'alert' : 'checkCircle'} size={16} /></span>
-            <h2>Needs attention</h2>
-            {alerts.length > 0 && <span className="ph-attn-count">{alerts.length}</span>}
-          </div>
-          {alerts.length === 0 ? (
-            <p className="ph-attn-clear">All clear. Nothing needs you right now.</p>
-          ) : (
-            <>
-              <ul className="ph-attn-list">
-                {shownAlerts.map((a) => (
-                  <li key={a.id} className={`ph-attn-row ph-attn--${a.level}`}>
-                    <span className="ph-attn-row-icon"><Icon name={a.icon} size={14} /></span>
-                    <span className="ph-attn-text">{a.text}</span>
-                    {a.action && <button className="ph-attn-btn" onClick={() => act(a)}>{a.action.label}</button>}
-                  </li>
-                ))}
-              </ul>
-              {alerts.length > ALERTS_SHOWN && (
-                <button className="btn-text ph-attn-more" onClick={() => setAllAlerts((v) => !v)}>
-                  {allAlerts ? 'Show fewer' : `Show all ${alerts.length}`}
-                </button>
-              )}
-            </>
-          )}
-        </section>
+        {/* Needs action, then New order (medicines from Procurement) right under it. */}
+        <div className="ph-dash-side">
+          <section className="card ph-card ph-attn" aria-label="Needs action">
+            <div className="ph-attn-head">
+              <span className={`ph-attn-icon ${alerts.length ? 'is-on' : ''}`}><Icon name={alerts.length ? 'alert' : 'checkCircle'} size={16} /></span>
+              <h2>Needs action</h2>
+              {alerts.length > 0 && <span className="ph-attn-count">{alerts.length}</span>}
+            </div>
+            {alerts.length === 0 ? (
+              <p className="ph-attn-clear">All clear. Nothing needs you right now.</p>
+            ) : (
+              <>
+                <ul className="ph-attn-list">
+                  {shownAlerts.map((a) => (
+                    <li key={a.id} className={`ph-attn-row ph-attn--${a.level}`}>
+                      <span className="ph-attn-row-icon"><Icon name={a.icon} size={14} /></span>
+                      <span className="ph-attn-text">{a.text}</span>
+                      {a.action && <button className="ph-attn-btn" onClick={() => act(a)}>{a.action.label}</button>}
+                    </li>
+                  ))}
+                </ul>
+                {alerts.length > ALERTS_SHOWN && (
+                  <button className="btn-text ph-attn-more" onClick={() => setAllAlerts((v) => !v)}>
+                    {allAlerts ? 'Show fewer' : `Show all ${alerts.length}`}
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+          <button className="btn btn-primary ph-new-order" onClick={() => store.startOrder()}>
+            <span className="btn-ico"><Icon name="plus" size={16} /></span>New order
+          </button>
+        </div>
       </div>
 
       {/* ---------------------------------------------------------- charts */}
       <div className="ph-charts">
         <FootprintsChart times={store.dispenseTimes} today={store.dispensedToday} onOpen={() => store.go('billing')} />
         <TodayReport bills={store.bills} onOpen={() => store.go('billing')} />
-        <ExpiryChart batches={store.batches} onOpen={(f) => store.go('stock', f)} />
+        <TodoCard store={store} />
       </div>
 
       {/* ---------------------------------------------------- inventory watch */}

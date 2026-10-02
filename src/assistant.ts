@@ -16,13 +16,13 @@ import {
   band,
   daysLeft,
   inr,
-  makerOf,
   monYr,
   placeOf,
   productById,
   productName,
   type Batch,
   type Bill,
+  type Manufacturer,
   type Prescription,
 } from './data';
 
@@ -87,6 +87,7 @@ interface State {
   pending: Prescription[];
   bills: Bill[];
   stockOf: (productId: string) => number;
+  makerFor: (productId: string) => Manufacturer;
 }
 
 function buildIndex(s: State): Doc[] {
@@ -98,7 +99,7 @@ function buildIndex(s: State): Doc[] {
     const total = s.stockOf(p.id);
     const next = [...live].sort((a, z) => a.expiry.getTime() - z.expiry.getTime())[0];
     const low = total < p.reorder;
-    const maker = makerOf(p);
+    const maker = s.makerFor(p.id);
     docs.push({
       kind: 'medicine',
       ref: p.id,
@@ -182,12 +183,12 @@ function buildIndex(s: State): Doc[] {
     ['fefo', 'Batch order (FEFO)', 'Batches are used First Expiry, First Out: the batch that expires soonest is picked first. Expired and quarantined batches are never picked.', ['fefo', 'expiry']],
     ['h1', 'Schedule H1 register', `Schedule H1 medicines${h1 ? ` (here: ${h1})` : ''} must be entered in the H1 register with patient, prescriber and quantity.`, ['h1']],
     ['cold', 'Cold chain', `Cold-chain medicines${cold ? ` (here: ${cold})` : ''} are kept at 2–8 °C and handed over without breaking the cold chain.`, ['cold']],
-    ['quarantine', 'Remove from use', 'An expired, damaged or recalled batch is removed from use in Stock. It stays on record but can never be dispensed.', ['quarantine', 'expiry']],
+    ['quarantine', 'Remove from use', 'An expired, damaged or recalled batch is removed from use in Inventory. It stays on record but can never be dispensed.', ['quarantine', 'expiry']],
     ['backorder', 'Partial dispense', 'When stock is short, what is available is dispensed and the rest is backordered. The prescription is marked Partial.', ['backorder', 'stock']],
     ['allergy', 'Allergy conflicts', 'An allergy conflict stops that medicine. Hold the prescription and query the prescriber.', ['allergy']],
     ['interaction', 'Interactions', 'An interaction is a warning, not a stop. The pharmacist reviews it before ticking Verified.', ['interaction']],
     ['gst', 'MRP and GST', 'MRP already includes GST. The bill shows the tax split equally into CGST and SGST.', ['gst']],
-    ['low', 'Low stock', 'Low stock means below the reorder level. Record the delivery in Receive; it counts only after you press Add to stock.', ['low', 'stock']],
+    ['low', 'Low stock', 'Low stock means below the reorder level (7 days of sales). Order it with New order on the Dashboard, or Order more in Inventory.', ['low', 'stock']],
   ];
   for (const [ref, label, text, t] of rules) docs.push({ kind: 'rule', ref, label, text, terms: t, names: [] });
 
