@@ -1,0 +1,39 @@
+{
+  "name": "shri-health-pharmacy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "lint": "oxlint",
+    "check": "oxlint && tsc -b && vite build",
+    "preview": "vite preview",
+    "preview:https": "HTTPS=1 vite preview --port 4443",
+    "voice-model": "./scripts/fetch-voice-model.sh"
+  },
+  "dependencies": {
+    "@fontsource-variable/noto-sans-devanagari": "^5.3.0",
+    "@fontsource-variable/noto-sans-kannada": "^5.3.0",
+    "@fontsource-variable/noto-sans-malayalam": "^5.3.0",
+    "@fontsource-variable/noto-sans-tamil": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vosk-browser": "^0.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^5.4.21"
+  }
+}

@@ -1,0 +1,397 @@
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: clamp(232px, 16vw, 272px) minmax(0, 1fr);
+  background-color: var(--page-to);
+  overflow-x: clip;
+}
+
+/* The page backdrop: a soft top-to-bottom tone with two faint colour washes,
+   fixed so it never scrolls. */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 90% -10%, var(--bloom-a), transparent 70%),
+    radial-gradient(760px 520px at -5% 105%, var(--bloom-b), transparent 70%),
+    linear-gradient(180deg, var(--page-from), var(--page-to));
+  transition: background 200ms var(--ease);
+}
+
+/* ==========================================================================
+   Left: light navigation column
+   ========================================================================== */
+.side-nav {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 14px;
+  padding-left: max(14px, env(safe-area-inset-left));
+  border-right: 1px solid var(--glass-border);
+  background: var(--nav-fill);
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.side-drawer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.nav-toggle,
+.nav-scrim {
+  display: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px;
+}
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--vivid);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+/* The SHRI HEALTH ribbon: a transparent PNG, so no tile behind it. */
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  background: none;
+  object-fit: contain;
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.side-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.side-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.side-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+  animation: live-pulse 2.4s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ==========================================================================
+   Right: stage
+   ========================================================================== */
+.app-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px clamp(18px, 2vw, 28px) 20px;
+  padding-right: max(clamp(18px, 2vw, 28px), env(safe-area-inset-right));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: -20px calc(-1 * clamp(18px, 2vw, 28px)) 20px;
+  padding: 14px clamp(18px, 2vw, 28px);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--nav-fill);
+}
+.top-title {
+  min-width: 0;
+}
+.top-hint {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.top-heading {
+  font-family: var(--font-display);
+  /* Shrinks a little on narrow stages so the longer first-step greeting stays on one line. */
+  font-size: clamp(18px, 1.4vw, 21px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 5px 12px 5px 5px;
+}
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--butter-soft);
+  color: var(--butter);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.user-role {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* The form column is capped so it stays in proportion with the two side
+   columns instead of absorbing every spare pixel on a wide monitor. */
+.app-main {
+  min-width: 0;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}
+.app-main > .card {
+  flex: 0 0 auto;
+}
+
+/* ---- Day / night toggle ---- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  color: var(--ink-2);
+  flex-shrink: 0;
+  transition: transform 0.3s var(--ease), box-shadow 0.25s var(--ease), color 0.25s var(--ease),
+    border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.theme-toggle:hover {
+  color: var(--ink);
+  border-color: var(--butter);
+  background: var(--butter-soft);
+}
+.theme-toggle:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   Tablets and phones (below 1024px): the sidebar becomes a slim sticky bar
+   with a menu button, and the navigation slides in from the left.
+   ========================================================================== */
+@media (max-width: 1023.98px) {
+  /* minmax(0, …) rather than 1fr: a plain 1fr column cannot shrink below the
+     natural width of its content, which would make the page wider than a phone. */
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side-nav {
+    --drawer-w: min(300px, 86vw);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: auto;
+    display: block;
+    padding: 0;
+    border-right: none;
+    background: none;
+  }
+  .side-head {
+    min-height: var(--topbar-h);
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    background: var(--nav-fill);
+    border-bottom: 1px solid var(--glass-hairline);
+  }
+  .brand {
+    padding: 0;
+  }
+  .brand-sub {
+    display: block;
+  }
+  .nav-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+    color: var(--ink);
+  }
+  .nav-toggle-dot {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 0 2px var(--nav-fill);
+  }
+
+  .side-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    width: var(--drawer-w);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 14px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(14px, env(safe-area-inset-left));
+    background: var(--nav-fill);
+    border-right: 1px solid var(--glass-border);
+    box-shadow: 0 0 40px rgba(16, 24, 40, 0.18);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.28s var(--ease), visibility 0s linear 0.28s;
+  }
+  .side-nav.is-open .side-drawer {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.28s var(--ease), visibility 0s;
+  }
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: rgba(8, 12, 20, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s var(--ease);
+  }
+  .side-nav.is-open .nav-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :root.nav-locked,
+  :root.nav-locked body {
+    overflow: hidden;
+  }
+
+  .app-stage {
+    padding: 14px 12px 24px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .top-bar {
+    margin: -14px calc(-1 * max(12px, env(safe-area-inset-right))) 14px calc(-1 * max(12px, env(safe-area-inset-left)));
+    padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 640px) {
+  .top-bar {
+    gap: 10px;
+  }
+}
+
+:root[data-theme='dark'] .side-nav {
+  background: var(--nav-fill);
+}
+@media (max-width: 1023.98px) {
+  :root[data-theme='dark'] .side-nav {
+    background: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-drawer,
+  .nav-scrim {
+    transition: none !important;
+  }
+}
