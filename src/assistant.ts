@@ -9,8 +9,13 @@
  * A model can later be placed behind a server to phrase answers from the same
  * retrieved records.
  */
+import { detectAlerts } from './alerts';
 import {
+  CATEGORIES,
   DISPENSE_FROM,
+  STAFF,
+  hhmm,
+  onShift,
   PRODUCTS,
   accountOf,
   band,
@@ -21,12 +26,14 @@ import {
   productById,
   productName,
   type Batch,
+  type AuditEvent,
   type Bill,
+  type Order,
   type Manufacturer,
   type Prescription,
 } from './data';
 
-export type SourceKind = 'medicine' | 'batch' | 'prescription' | 'bills' | 'rule';
+export type SourceKind = 'medicine' | 'batch' | 'prescription' | 'bills' | 'rule' | 'order' | 'alert' | 'staff' | 'category';
 export interface Source {
   kind: SourceKind;
   /** Product id, prescription id or rule key: what a click opens. */
@@ -61,14 +68,19 @@ const SYNONYMS: Record<string, string> = {
   nurse: 'nurse', ward: 'ward', bed: 'ward', where: 'ward', admitted: 'ward',
   fridge: 'cold', refrigerate: 'cold', refrigerated: 'cold', temperature: 'cold', cold: 'cold',
   h1: 'h1', register: 'h1', schedule: 'h1',
-  fefo: 'fefo', batch: 'fefo', batches: 'fefo', pick: 'fefo', order: 'fefo',
+  fefo: 'fefo', batch: 'fefo', batches: 'fefo', pick: 'fefo',
+  order: 'ordered', orders: 'ordered', ordered: 'ordered', request: 'ordered', requests: 'ordered', requested: 'ordered', procurement: 'ordered', purchase: 'ordered', po: 'ordered',
+  attention: 'action', action: 'action', actions: 'action', alert: 'action', alerts: 'action', problems: 'action', problem: 'action', issues: 'action', urgent: 'action',
+  staff: 'staff', shift: 'staff', duty: 'staff', pharmacist: 'staff', pharmacists: 'staff', employee: 'staff', employees: 'staff', team: 'staff',
+  served: 'served', done: 'served', dispensed: 'served', completed: 'served', finished: 'served', patients: 'served',
+  antibiotics: 'antibiotic', antidiabetics: 'antidiabetic', diabetes: 'antidiabetic', diabetic: 'antidiabetic', heart: 'cardiac', cardiac: 'cardiac', gastric: 'gastro', acidity: 'gastro', acid: 'gastro', pain: 'pain', fever: 'pain', painkiller: 'pain', painkillers: 'pain', category: 'category', categories: 'category', type: 'category', kind: 'category',
   quarantine: 'quarantine', quarantined: 'quarantine', remove: 'quarantine', removed: 'quarantine', damaged: 'quarantine', recall: 'quarantine', recalled: 'quarantine',
   partial: 'backorder', short: 'backorder', shortage: 'backorder', backorder: 'backorder', backordered: 'backorder',
   gst: 'gst', tax: 'gst', cgst: 'gst', sgst: 'gst', mrp: 'gst',
   low: 'low', reorder: 'low', running: 'low', finish: 'low',
   allergy: 'allergy', allergic: 'allergy', allergies: 'allergy',
   interaction: 'interaction', interactions: 'interaction',
-  stat: 'stat', urgent: 'stat', emergency: 'stat',
+  stat: 'stat', emergency: 'stat',
   make: 'maker', makes: 'maker', made: 'maker', maker: 'maker', makers: 'maker', manufacturer: 'maker', manufacturers: 'maker', manufactured: 'maker', company: 'maker', brand: 'maker',
   supplier: 'maker', suppliers: 'maker', distributor: 'maker',
   reddys: 'reddy',
@@ -88,6 +100,8 @@ interface State {
   bills: Bill[];
   stockOf: (productId: string) => number;
   makerFor: (productId: string) => Manufacturer;
+  orders: Order[];
+  audit: AuditEvent[];
 }
 
 function buildIndex(s: State): Doc[] {
@@ -177,6 +191,72 @@ function buildIndex(s: State): Doc[] {
     names: [],
   });
 
+  // Served today: one bill per dispensed prescription.
+  docs.push({
+    kind: 'bills',
+    ref: 'billing',
+    label: `Served today (${s.bills.length})`,
+    text: s.bills.length
+      ? `Served today: ${[...s.bills].sort((a, z) => z.at.getTime() - a.at.getTime()).map((b) => `${b.patient.name} (${hhmm(b.at)}, ${inr(b.total)})`).join(', ')}.`
+      : 'Nobody has been served yet today.',
+    terms: ['served', 'paid'],
+    names: [],
+  });
+
+  // What has been requested from Procurement in this session.
+  const reqs = [...new Set(s.orders.map((o) => o.no))];
+  docs.push({
+    kind: 'order',
+    ref: 'order',
+    label: reqs.length ? `Requests to Procurement (${reqs.length})` : 'Requests to Procurement',
+    text: reqs.length
+      ? `Sent to Procurement: ` +
+        reqs.map((no) => `${no}: ${s.orders.filter((o) => o.no === no).map((o) => `${productById(o.productId).generic} ${o.qty} ${productById(o.productId).unit}`).join(', ')}`).join('; ') +
+        '. They wait there for a vendor; record them in stock when they arrive.'
+      : 'Nothing has been sent to Procurement yet. Use New order on the Dashboard, or Order more in Inventory.',
+    terms: ['ordered', 'stock', ...s.orders.flatMap((o) => terms(productById(o.productId).generic))],
+    names: [],
+  });
+
+  // Needs action: the same problems the Dashboard lists.
+  const alerts = detectAlerts({ batches: s.batches, pending: s.pending });
+  docs.push({
+    kind: 'alert',
+    ref: 'dashboard',
+    label: `Needs action (${alerts.length})`,
+    text: alerts.length ? `Needs action: ${alerts.map((a) => a.text + (a.action ? ` (${a.action.label})` : '')).join('; ')}.` : 'Nothing needs action right now.',
+    terms: ['action', 'expiry', 'low'],
+    names: [],
+  });
+
+  // Staff on shift and what each did today.
+  for (const m of STAFF) {
+    const did = s.audit.filter((a) => a.user === m.name);
+    docs.push({
+      kind: 'staff',
+      ref: m.name,
+      label: m.fullName,
+      text:
+        `${m.fullName} (${m.role}, ${m.id}, ext ${m.ext}): ${onShift(m) ? 'on shift' : 'off shift'}, ${String(m.shift[0]).padStart(2, '0')}:00–${String(m.shift[1]).padStart(2, '0')}:00. ` +
+        (did.length ? `${did.length} action${did.length === 1 ? '' : 's'} today; latest: ${did[0].action} at ${hhmm(did[0].at)} (${did[0].detail}).` : 'No actions recorded today.'),
+      terms: ['staff', ...terms(m.role)],
+      names: words(m.fullName).filter((w) => w.length > 2),
+    });
+  }
+
+  // Medicines by category.
+  for (const c of CATEGORIES) {
+    const meds = PRODUCTS.filter((p) => p.category === c.key);
+    docs.push({
+      kind: 'category',
+      ref: c.key,
+      label: c.label,
+      text: `${c.label}: ${meds.map((p) => `${productName(p)} (${s.stockOf(p.id)} ${p.unit} in stock${s.stockOf(p.id) < p.reorder ? ', low' : ''})`).join(', ')}.`,
+      terms: ['category', ...terms(c.label), c.key],
+      names: [c.key],
+    });
+  }
+
   const h1 = PRODUCTS.filter((p) => p.schedule === 'H1').map((p) => p.generic).join(', ');
   const cold = PRODUCTS.filter((p) => p.cold).map((p) => p.generic).join(', ');
   const rules: [string, string, string, string[]][] = [
@@ -221,7 +301,7 @@ const toSource = ({ kind, ref, label }: Doc): Source => ({ kind, ref, label });
 export function ask(question: string, state: State): Answer {
   const q = terms(question);
   if (q.length === 0) {
-    return { lines: ['Ask about stock, expiry, waiting prescriptions, today’s bills or a pharmacy rule.'], sources: [], found: false };
+    return { lines: ['Ask about stock, expiry, waiting or served patients, bills, orders, staff, or a pharmacy rule.'], sources: [], found: false };
   }
   const docs = buildIndex(state);
   const named = docs.filter((d) => d.names.some((w) => q.includes(w)));
@@ -235,7 +315,13 @@ export function ask(question: string, state: State): Answer {
   };
 
   let picked: Doc[] = [];
-  if (has('expiry') && !has('fefo')) picked = list('batch', () => true, 99).sort((a, z) => (a.days ?? 0) - (z.days ?? 0)).slice(0, 5);
+  const only = (kind: SourceKind) => docs.filter((d) => d.kind === kind);
+  if (has('ordered')) picked = only('order');
+  else if (has('action')) picked = only('alert');
+  else if (has('staff') && !named.length) picked = only('staff');
+  else if (has('served')) picked = docs.filter((d) => d.label.startsWith('Served today'));
+  else if (has('category') && !named.length) picked = only('category');
+  else if (has('expiry') && !has('fefo')) picked = list('batch', () => true, 99).sort((a, z) => (a.days ?? 0) - (z.days ?? 0)).slice(0, 5);
   else if (has('paid') || (has('gst') && !named.length)) picked = docs.filter((d) => d.kind === 'bills').concat(has('gst') ? docs.filter((d) => d.ref === 'gst') : []);
   else if (has('low') && !named.length) picked = docs.filter((d) => d.kind === 'medicine' && d.terms.includes('low'));
   else if ((has('pending') || has('stat')) && !named.length)
@@ -257,7 +343,7 @@ export function ask(question: string, state: State): Answer {
 
   if (picked.length === 0) {
     return {
-      lines: ['I could not find that in this pharmacy’s records.', 'Try a medicine or patient name, or words like stock, expiry, waiting, paid.'],
+      lines: ['I could not find that in this pharmacy’s records.', 'Try a medicine, patient or staff name, or words like stock, expiry, waiting, paid, ordered, needs action.'],
       sources: [],
       found: false,
     };
@@ -266,10 +352,12 @@ export function ask(question: string, state: State): Answer {
 }
 
 export const SUGGESTIONS = [
+  'What needs action?',
+  'Which medicines are low?',
   'What expires soon?',
-  'Stock of ceftriaxone',
   'Who is waiting?',
   'How much was paid today?',
-  'Which medicines are low?',
-  'Where is Meena Devi?',
+  'What did we order?',
+  'Who is on shift?',
+  'Stock of ceftriaxone',
 ];

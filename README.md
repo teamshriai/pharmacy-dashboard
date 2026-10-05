@@ -80,7 +80,9 @@ src/
   Reports.tsx  Patients.tsx
   Staff.tsx  Settings.tsx                         one file per screen
   charts.tsx        dashboard charts
-  assistant.ts      the Ask helper: answers only from the console's own records
+  assistant.ts      SHRI AI's answer engine: answers only from the console's own records
+  AiChat.tsx        SHRI AI: floating button and chat panel (typed or spoken questions)
+  voice.ts          offline voice input, shared by the chat and the To-do
   parts.tsx         shared badges, chips, gauges
   download.ts       saves generated PDFs and CSVs (works on iOS Safari)
   pharmacy.css      console styles

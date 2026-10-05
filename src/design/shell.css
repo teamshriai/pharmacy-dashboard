@@ -153,6 +153,10 @@
   background: color-mix(in srgb, var(--surface-1) 95%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  /* The blur makes the bar its own layer; lift it above the page so the search
+     results that drop from it are not painted under the cards below. */
+  position: relative;
+  z-index: 20;
 }
 .top-title {
   min-width: 0;

@@ -6,6 +6,7 @@ import { Icon } from './design/Icon';
 import { DISPENSE_FROM, PRODUCTS, USER, band, productName } from './data';
 import { usePharmacyStore, type Section, type Store } from './store';
 import { Dashboard } from './Dashboard';
+import { AiChat } from './AiChat';
 import { NewOrder } from './NewOrder';
 import { Dispense } from './Dispense';
 import { Stock } from './Stock';
@@ -222,6 +223,7 @@ export default function PharmacyApp() {
         </header>
 
         <Toast store={store} />
+        <AiChat store={store} />
 
         <main id="main-content" tabIndex={-1} className="app-main ph-main">
           {rx ? (

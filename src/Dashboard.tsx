@@ -12,7 +12,6 @@ import {
   type RxType,
 } from './data';
 import { detectAlerts, type Alert } from './alerts';
-import { Assistant } from './Assistant';
 import { FootprintsChart, TodayReport } from './charts';
 import { TodoCard } from './Todo';
 import { Avatar, Empty, Stat, Status, StockGauge, TypeBadge } from './parts';
@@ -295,7 +294,6 @@ export function Dashboard({ store }: { store: Store }) {
         </section>
 
 
-        <Assistant store={store} />
       </div>
     </div>
   );

@@ -2329,137 +2329,6 @@ tr:has(.ph-exp--lt30) .ph-link-btn {
   }}
 
 /* ==========================================================================
-   Ask: answers from the pharmacy's own records
-   ========================================================================== */
-.ph-ask-head {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-bottom: 12px;
-}
-.ph-ask-head h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--ink);
-}
-.ph-ask-head p {
-  margin: 1px 0 0;
-  font-size: var(--text-2xs);
-  color: var(--ink-3);
-}
-.ph-ask-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--ai) 14%, transparent);
-  color: var(--ai);
-}
-.ph-ask-form {
-  display: flex;
-  gap: 8px;
-}
-.ph-ask-form input {
-  flex: 1;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
-  background: var(--glass-fill-strong);
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--ink);
-}
-.ph-ask-form input:focus {
-  border-color: var(--ai);
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ai) 16%, transparent);
-}
-.ph-ask-form .btn {
-  min-height: 38px;
-  padding: 0 14px;
-}
-.ph-ask-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-.ph-ask-chips .ph-chip {
-  padding: 5px 10px;
-  font-size: var(--text-2xs);
-}
-.ph-ask-answer {
-  margin-top: 12px;
-}
-.ph-ask-q {
-  margin: 0 0 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--ink-2);
-}
-.ph-ask-q::before {
-  content: 'Q ';
-  color: var(--ai);
-  font-weight: 700;
-}
-.ph-ask-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 10px 12px;
-  border-left: 3px solid var(--ai);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--glass-inset);
-  list-style: none;
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  color: var(--ink);
-}
-.ph-ask-lines.is-none {
-  border-left-color: var(--line-2);
-  color: var(--ink-2);
-}
-.ph-ask-sources {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: var(--text-2xs);
-  color: var(--ink-3);
-}
-.ph-ask-src {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  font-size: var(--text-2xs);
-  color: var(--ink-2);
-  transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
-}
-.ph-ask-src:not(:disabled):hover {
-  border-color: var(--ai);
-  color: var(--ink);
-}
-.ph-ask-src.is-static {
-  cursor: default;
-  opacity: 0.85;
-}
-.ph-ask-again {
-  margin-top: 10px;
-  font-size: var(--text-xs);
-}
-
-/* ==========================================================================
    Scan to pay
    ========================================================================== */
 .ph-paynow {
@@ -2875,7 +2744,8 @@ button.ph-metric:hover {
 
 .ph-watch {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  /* Low stock has the row to itself; questions go to the SHRI AI chat. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -3625,7 +3495,8 @@ button.ph-metric:hover {
 .ph-toast-slot {
   position: fixed;
   right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
+  /* Above the SHRI AI button. */
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
   z-index: 60;
   pointer-events: none;
 }
@@ -3685,7 +3556,8 @@ button.ph-metric:hover {
 @media (max-width: 640px) {
   .ph-toast-slot {
     right: max(16px, env(safe-area-inset-right));
-    bottom: max(16px, env(safe-area-inset-bottom));
+    /* Above the SHRI AI button here too. */
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
     left: max(16px, env(safe-area-inset-left));
   }
   .ph-toast {
@@ -4736,4 +4608,362 @@ button.ph-metric:hover {
 .brand-link:focus-visible {
   outline: none;
   box-shadow: var(--ring);
+}
+
+/* ==========================================================================
+   SHRI AI: floating button and the chat panel on the right
+   ========================================================================== */
+.ph-ai-fab {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 54px;
+  padding: 0 20px 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-violet) 70%, var(--butter)));
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 14px 30px -12px color-mix(in srgb, var(--butter) 85%, transparent), 0 2px 6px rgb(0 0 0 / 0.12);
+  transition: transform 0.18s var(--ease), box-shadow 0.2s var(--ease);
+  animation: ph-ai-in 0.25s var(--ease);
+}
+.ph-ai-fab:hover {
+  transform: translateY(-2px);
+}
+.ph-ai-fab:focus-visible {
+  outline: none;
+  box-shadow: var(--ring), 0 14px 30px -12px color-mix(in srgb, var(--butter) 85%, transparent);
+}
+.ph-ai-fab svg {
+  animation: ph-ai-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes ph-ai-twinkle {
+  0%, 100% { transform: rotate(0) scale(1); }
+  50% { transform: rotate(12deg) scale(1.12); }
+}
+@keyframes ph-ai-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+.ph-ai {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 56;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-fill-strong);
+  box-shadow: 0 30px 70px -24px rgb(0 0 0 / 0.38), 0 2px 8px rgb(0 0 0 / 0.08);
+  animation: ph-ai-slide 0.25s var(--ease);
+}
+@keyframes ph-ai-slide {
+  from { opacity: 0; transform: translateX(24px); }
+}
+.ph-ai-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 12px 16px;
+  border-bottom: 1px solid var(--glass-hairline);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--butter) 10%, var(--glass-fill-strong)), color-mix(in srgb, var(--tone-violet) 8%, var(--glass-fill-strong)));
+}
+.ph-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-violet) 70%, var(--butter)));
+  color: #fff;
+}
+.ph-ai-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.ph-ai-title strong {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--ink);
+}
+.ph-ai-title span {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ph-ai-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.ph-ai-iconbtn:hover {
+  background: var(--glass-fill-hover);
+  color: var(--ink);
+}
+.ph-ai-iconbtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.ph-ai-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-3) 30%, transparent) transparent;
+}
+.ph-ai-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ph-ai-msg {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: ph-ai-in 0.2s var(--ease);
+}
+.ph-ai-msg.is-me {
+  justify-content: flex-end;
+}
+.ph-ai-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--butter), color-mix(in srgb, var(--tone-violet) 70%, var(--butter)));
+  color: #fff;
+}
+.ph-ai-bubble {
+  max-width: 86%;
+  padding: 10px 13px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--glass-fill-muted);
+  border: 1px solid var(--glass-hairline);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ph-ai-bubble p {
+  margin: 0;
+}
+.ph-ai-bubble p + p {
+  margin-top: 6px;
+}
+.ph-ai-bubble.is-none {
+  color: var(--ink-2);
+}
+.ph-ai-msg.is-me .ph-ai-bubble {
+  border: 0;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--butter);
+  color: var(--brand-on);
+}
+.ph-ai-bubble.is-listening {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-style: italic;
+  background: var(--danger-soft) !important;
+  color: var(--ink) !important;
+}
+.ph-ai-via {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.ph-ai-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ph-ai-suggest button {
+  padding: 5px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-fill-strong);
+  font: inherit;
+  font-size: 12px;
+  color: var(--butter);
+  cursor: pointer;
+}
+.ph-ai-suggest button:hover {
+  border-color: var(--butter);
+  background: var(--butter-soft);
+}
+.ph-ai-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--glass-border);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.ph-ai-sources button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-fill-strong);
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--butter);
+  cursor: pointer;
+}
+.ph-ai-sources button:hover {
+  border-color: var(--butter);
+}
+.ph-ai-sources button.is-static {
+  color: var(--ink-3);
+  cursor: default;
+}
+.ph-ai-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 14px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  font-size: 12px;
+  color: var(--warn);
+}
+.ph-ai-problem span {
+  flex: 1;
+}
+.ph-ai-problem a {
+  font-weight: 600;
+  color: var(--butter);
+  word-break: break-all;
+}
+
+.ph-ai-compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--glass-hairline);
+  background: var(--glass-fill-strong);
+}
+.ph-ai-compose textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 120px;
+  min-height: 42px;
+  padding: 11px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 21px;
+  background: var(--glass-fill-muted);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  resize: none;
+  field-sizing: content;
+}
+.ph-ai-compose textarea:focus {
+  outline: none;
+  border-color: var(--butter);
+  box-shadow: var(--ring);
+}
+.ph-ai-mic,
+.ph-ai-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease), background 0.2s var(--ease);
+}
+.ph-ai-mic {
+  background: var(--butter-soft);
+  color: var(--butter);
+}
+.ph-ai-mic:hover {
+  transform: scale(1.05);
+}
+.ph-ai-mic.is-on {
+  background: var(--danger);
+  color: #fff;
+  animation: ph-mic-pulse 1.4s ease-in-out infinite;
+}
+.ph-ai-send {
+  background: var(--butter);
+  color: var(--brand-on);
+}
+.ph-ai-send:disabled {
+  background: var(--glass-inset);
+  color: var(--ink-3);
+  cursor: default;
+}
+.ph-ai-mic:focus-visible,
+.ph-ai-send:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+@media (max-width: 760px) {
+  .ph-ai {
+    inset: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .ph-ai-fab-label {
+    display: none;
+  }
+  .ph-ai-fab {
+    width: 54px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-ai-fab,
+  .ph-ai-fab svg,
+  .ph-ai,
+  .ph-ai-msg,
+  .ph-ai-mic.is-on {
+    animation: none;
+  }
 }

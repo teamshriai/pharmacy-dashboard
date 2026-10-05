@@ -33,7 +33,9 @@ import {
   Search,
   ShieldCheck,
   Siren,
+  SendHorizontal,
   SlidersHorizontal,
+  Sparkles,
   Snowflake,
   Stethoscope,
   Sun,
@@ -91,6 +93,8 @@ const ICONS = {
   users: Users,
   factory: Factory,
   badge: IdCard,
+  sparkles: Sparkles,
+  send: SendHorizontal,
   mic: Mic,
   sliders: SlidersHorizontal,
 } satisfies Record<string, LucideIcon>;
