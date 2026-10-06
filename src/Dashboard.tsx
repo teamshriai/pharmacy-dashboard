@@ -80,10 +80,12 @@ export function Dashboard({ store }: { store: Store }) {
     box?.querySelector<HTMLElement>('.ph-wq-scroll')?.focus({ preventScroll: true });
   };
 
+  /** Removing stock from use cannot be undone, so it is confirmed first (as in Inventory). */
+  const [confirming, setConfirming] = useState<string | null>(null);
   function act(a: Alert) {
     const x = a.action;
     if (!x) return;
-    if (x.kind === 'quarantine') store.quarantine(x.ref, 'Expired');
+    if (x.kind === 'quarantine') setConfirming(a.id);
     else if (x.kind === 'open') store.openRx(x.ref);
     else if (x.kind === 'stock') store.openProduct(x.ref);
     else store.startOrder(x.ref);
@@ -124,7 +126,7 @@ export function Dashboard({ store }: { store: Store }) {
       {store.flash && (
         <div className="ph-posted ph-posted--inline" role="status">
           <Icon name="checkCircle" size={16} />
-          <span><strong>{store.flash}</strong>Pharmacist verification happens at dispensing.</span>
+          <span><strong>{store.flash}</strong>{store.flash.includes('sent to billing') ? 'Give the medicines once it is paid.' : 'Pharmacist verification happens at dispensing.'}</span>
           <button className="ph-x" onClick={() => store.setFlash('')} aria-label="Dismiss"><Icon name="close" size={14} /></button>
         </div>
       )}
@@ -242,7 +244,18 @@ export function Dashboard({ store }: { store: Store }) {
                     <li key={a.id} className={`ph-attn-row ph-attn--${a.level}`}>
                       <span className="ph-attn-row-icon"><Icon name={a.icon} size={14} /></span>
                       <span className="ph-attn-text">{a.text}</span>
-                      {a.action && <button className="ph-attn-btn" onClick={() => act(a)}>{a.action.label}</button>}
+                      {a.action && confirming === a.id ? (
+                        <span className="ph-attn-confirm" role="group" aria-label="Confirm remove from use">
+                          {(() => {
+                            const bt = store.batches.find((b) => b.id === a.action!.ref);
+                            return bt ? <em>Remove {bt.qty} {PRODUCTS.find((p) => p.id === bt.productId)?.unit} from use?</em> : null;
+                          })()}
+                          <button className="ph-attn-btn ph-attn-btn--danger" onClick={() => { store.quarantine(a.action!.ref, 'Expired'); setConfirming(null); }}>Remove</button>
+                          <button className="btn-text" onClick={() => setConfirming(null)}>Cancel</button>
+                        </span>
+                      ) : (
+                        a.action && <button className="ph-attn-btn" onClick={() => act(a)}>{a.action.label}</button>
+                      )}
                     </li>
                   ))}
                 </ul>

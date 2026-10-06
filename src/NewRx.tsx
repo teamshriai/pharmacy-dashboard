@@ -18,6 +18,7 @@ import {
 } from './data';
 import { Avatar, EncounterBadge, Head, NurseLine, Stat } from './parts';
 import type { Store } from './store';
+import { ageNote, byBrand, doseCheck, sameClass } from './formulary';
 
 const STEPS = ['Patient', 'Prescription', 'Review'];
 const COMMON_ALLERGIES = ['Penicillin', 'Sulfonamides', 'NSAIDs', 'Aspirin'];
@@ -54,9 +55,25 @@ export function NewRx({ store }: { store: Store }) {
 
   // ---- prescription ----
   const [doctor, setDoctor] = useState('');
+  /** The reason as written on the prescription; the clinical review checks it mentions known conditions. */
+  const [diagnosis, setDiagnosis] = useState('');
   const [discharge, setDischarge] = useState(false);
   const [stat, setStat] = useState(false);
   const [lines, setLines] = useState<Line[]>([newLine()]);
+  /** A brand written on the prescription, matched to the generic the pharmacy dispenses. */
+  const [brand, setBrand] = useState('');
+  const brandHits = byBrand(brand);
+  function addGeneric(productId: string) {
+    const empty = lines.find((l) => !l.productId);
+    if (empty) setLine(empty.uid, { productId });
+    else {
+      const l = newLine();
+      const st = productById(productId).strength;
+      setLines((ls) => [...ls, { ...l, productId, dose: st.includes('/') ? '' : st }]);
+    }
+    setBrand('');
+  }
+  const doseOf = (l: Line) => (l.productId && l.dose.trim() ? doseCheck({ productId: l.productId, dose: l.dose, frequency: l.freq, duration: '', qty: l.qty }) : null);
 
   const q2 = q.trim().toLowerCase();
   const matches = q2 ? store.patients.filter((p) => `${p.name} ${p.mrn} ${p.mobile ?? ''} ${p.ipNo ?? ''}`.toLowerCase().includes(q2)).slice(0, 6) : [];
@@ -117,6 +134,7 @@ export function NewRx({ store }: { store: Store }) {
   });
   const rxOk = !!doctor && lineErrors.every((e) => e.length === 0);
   const dupes = new Set(lines.map((l) => l.productId).filter((id, i, a) => id && a.indexOf(id) !== i));
+  const doubles = sameClass(lines.map((l) => l.productId).filter(Boolean));
 
   function setLine(uid: string, patch: Partial<Line>) {
     setLines((ls) =>
@@ -155,7 +173,7 @@ export function NewRx({ store }: { store: Store }) {
       duration: l.freq === 'STAT' ? '—' : l.freq === 'SOS' ? 'As needed' : `${l.days} day${l.days === 1 ? '' : 's'}`,
       qty: l.qty,
     }));
-    const rx = store.addRx({ patient: p, type, stat, doctor, lines: rxLines });
+    const rx = store.addRx({ patient: p, type, stat, doctor, lines: rxLines, diagnosis: diagnosis.trim() || undefined });
     if (dispenseNow) store.openRx(rx.id, rx);
     else {
       store.go('dashboard');
@@ -320,6 +338,10 @@ export function NewRx({ store }: { store: Store }) {
                 {DOCTORS.map((d) => <option key={d}>{d}</option>)}
               </select>
             </label>
+            <label className="field">
+              <span className="field-label">Diagnosis / reason <em className="ph-muted">(as written)</em></span>
+              <input className="field-input" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} placeholder="e.g. Knee pain; Type 2 diabetes" maxLength={120} />
+            </label>
             <div className="field">
               <span className="field-label">Priority</span>
               <div className="ph-seg" role="radiogroup" aria-label="Priority">
@@ -348,12 +370,37 @@ export function NewRx({ store }: { store: Store }) {
               </button>
             }
           />
+          <div className="ph-brand-find">
+            <label className="ph-finder">
+              <Icon name="book" size={14} />
+              <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Written by brand? e.g. Glycomet" aria-label="Find the generic for a brand" />
+            </label>
+            {brand.trim().length >= 3 && (
+              brandHits.length ? (
+                <span className="ph-brand-hits">
+                  {brandHits.map((h) => (
+                    <button key={h.brand} className="ph-brand-hit" onClick={() => addGeneric(h.productId)}>
+                      {h.brand} <Icon name="arrow" size={12} /> <strong>{productName(productById(h.productId))}</strong> <em>Add</em>
+                    </button>
+                  ))}
+                </span>
+              ) : (
+                <span className="ph-muted ph-brand-none">No brand in the formulary starts with “{brand.trim()}”.</span>
+              )
+            )}
+          </div>
+          {(() => {
+            const a = ageNote(patient.age);
+            return a?.level === 'child' ? <p className="ph-entry-age"><Icon name="alert" size={13} />{a.text}</p> : null;
+          })()}
           <ul className="ph-entry-lines">
             {lines.map((l, i) => {
               const p = l.productId ? productById(l.productId) : null;
               const conflict = p && allergyConflict(patient, p);
               const stock = p ? counterStock(p.id) : 0;
               const bad = (k: string) => (tried && lineErrors[i].includes(k) ? 'is-bad' : '');
+              const dose = doseOf(l);
+              const twin = p && doubles.find((d) => d.productIds.includes(p.id));
               return (
                 <li key={l.uid} className={`ph-entry ${conflict ? 'is-conflict' : ''}`}>
                   <span className="ph-entry-no">{i + 1}</span>
@@ -416,6 +463,9 @@ export function NewRx({ store }: { store: Store }) {
                       {p.cold && <span className="ph-flag"><Icon name="snow" size={11} /> Cold chain</span>}
                       {conflict && <span className="ph-entry-conflict"><Icon name="ban" size={12} /> Conflicts with {conflict} allergy</span>}
                       {dupes.has(p.id) && <span className="ph-entry-dupe"><Icon name="alert" size={12} /> Listed twice</span>}
+                      {dose?.level === 'over' && <span className="ph-entry-conflict ph-entry-dose"><Icon name="ban" size={12} /> {dose.text}</span>}
+                      {twin && <span className="ph-entry-dupe"><Icon name="alert" size={12} /> Same class as {twin.productIds.filter((id) => id !== p.id).map((id) => productById(id).generic).join(', ')} ({twin.klass.toLowerCase()})</span>}
+                      {dose?.level === 'ok' && <span className="ph-entry-dose-ok"><Icon name="book" size={12} /> {dose.text}</span>}
                     </div>
                   )}
                 </li>
@@ -439,7 +489,8 @@ export function NewRx({ store }: { store: Store }) {
             <span><em>Type</em>{type}</span>
             <span><em>Priority</em>{stat ? <span className="ph-prio-stat"><Stat /> STAT</span> : 'Routine'}</span>
             <span><em>Prescriber</em>{doctor}</span>
-            <span><em>Billing</em>{encounter === 'Outpatient' ? 'Pay at counter' : `Charged to ${patient.ipNo ?? 'emergency record'}`}</span>
+            {diagnosis.trim() && <span><em>Reason</em>{diagnosis.trim()}</span>}
+            <span><em>Billing</em>{encounter === 'Outpatient' ? 'Pay at billing counter' : `Charged to ${patient.ipNo ?? 'emergency record'}`}</span>
           </div>
           <div className="ph-table-wrap">
             <table className="ph-table">
@@ -449,6 +500,7 @@ export function NewRx({ store }: { store: Store }) {
                   const p = productById(l.productId);
                   const conflict = allergyConflict(patient, p);
                   const short = counterStock(p.id) < l.qty;
+                  const over = doseOf(l)?.level === 'over';
                   return (
                     <tr key={l.uid}>
                       <td data-label="#">{i + 1}</td>
@@ -460,6 +512,8 @@ export function NewRx({ store }: { store: Store }) {
                       <td data-label="Check">
                         {conflict ? (
                           <span className="ph-status ph-status--danger"><Icon name="ban" size={12} />Allergy</span>
+                        ) : over ? (
+                          <span className="ph-status ph-status--danger" title={doseOf(l)?.text}><Icon name="ban" size={12} />Dose above max</span>
                         ) : short ? (
                           <span className="ph-status ph-status--warn"><Icon name="alert" size={12} />Short</span>
                         ) : (
@@ -473,7 +527,7 @@ export function NewRx({ store }: { store: Store }) {
             </table>
           </div>
           <p className="ph-muted ph-review-note">
-            <Icon name="shieldCheck" size={13} /> Allergy, interaction and stock checks run again at dispensing, where the pharmacist verifies.
+            <Icon name="shieldCheck" size={13} /> Allergy, interaction, formulary dose and stock checks run again at dispensing, where the pharmacist verifies.
           </p>
         </section>
       )}

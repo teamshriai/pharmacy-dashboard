@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { pageOf, parseHash, titleOf, toHash, type StockLoc } from './route';
+import type { H1Entry } from './formulary';
 import { sendOrder, sendRequest, units } from './procurement';
 import {
   BATCHES,
@@ -14,11 +15,13 @@ import {
   TAT_TARGET_MIN,
   USER,
   band,
+  inr,
   plusDays,
   productById,
   productName,
   type AuditEvent,
   type Batch,
+  type Closure,
   type Bill,
   type Payment,
   type Category,
@@ -28,9 +31,10 @@ import {
   type Prescription,
   type RxLine,
   type RxType,
+  type Revision,
 } from './data';
 
-export type Section = 'dashboard' | 'order' | 'billing' | 'stock' | 'reports' | 'patients' | 'staff' | 'settings';
+export type Section = 'dashboard' | 'order' | 'billing' | 'stock' | 'formulary' | 'reports' | 'patients' | 'staff' | 'settings';
 export type StockFilter = 'all' | 'low' | 'expiring' | 'expired';
 
 export type Picks = Record<string, { batchId: string; qty: number }[]>;
@@ -76,7 +80,7 @@ export function usePharmacyStore() {
     const r = parseHash(window.location.hash);
     // A link to an unknown or already-closed prescription opens the queue instead.
     const rx = PRESCRIPTIONS.find((x) => x.id === r.rx);
-    return rx && (rx.status === 'New' || rx.status === 'Reviewing' || rx.status === 'On hold') ? r : { ...r, rx: null };
+    return rx && (rx.status === 'New' || rx.status === 'Reviewing' || rx.status === 'On hold' || rx.status === 'At billing') ? r : { ...r, rx: null };
   });
   const [section, setSectionState] = useState<Section>(initial.section);
   const [activeRx, setActiveRx] = useState<string | null>(initial.rx);
@@ -102,6 +106,8 @@ export function usePharmacyStore() {
     setOrderSeed(productId ?? null);
   }
   const [bills, setBills] = useState<Bill[]>(BILLS);
+  /** Schedule H1 register: one entry per H1 batch dispensed (Drugs and Cosmetics Rules, kept 3 years). */
+  const [h1, setH1] = useState<H1Entry[]>([]);
   const [entering, setEntering] = useState(initial.entering);
   /** One-line confirmation shown on the screen an action returns to. */
   const [flash, setFlash] = useState('');
@@ -216,7 +222,7 @@ export function usePharmacyStore() {
   }
 
   /** Numbers the prescription after the highest one on file and queues it as New. */
-  function addRx(entry: { patient: Patient; type: RxType; stat: boolean; doctor: string; lines: RxLine[] }) {
+  function addRx(entry: { patient: Patient; type: RxType; stat: boolean; doctor: string; lines: RxLine[]; diagnosis?: string }) {
     const top = Math.max(...rxs.map((r) => Number(r.id.slice(-5))));
     const id = `RX-${new Date().getFullYear()}-${String(top + 1).padStart(5, '0')}`;
     const rx: Prescription = { ...entry, id, time: new Date(), status: 'New' };
@@ -292,7 +298,15 @@ export function usePharmacyStore() {
       })
     );
     setBills((list) => [bill, ...list]);
-    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, status: short ? 'Partial' : 'Dispensed' } : r)));
+    const h1Lines = lines.filter((l) => productById(l.productId).schedule === 'H1');
+    if (h1Lines.length) {
+      const entries = h1Lines.map((l): H1Entry => ({
+        at: bill.at, rxId: rx.id, patient: rx.patient.name, mrn: rx.patient.mrn, prescriber: rx.doctor,
+        productId: l.productId, qty: l.qty, batchNo: l.batchNo, by: USER.name,
+      }));
+      setH1((list) => [...entries, ...list]);
+    }
+    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, status: short ? 'Partial' : 'Dispensed', billing: undefined } : r)));
     setDispensedToday((n) => n + 1);
     setDispenseTimes((t) => [...t, new Date()]);
 
@@ -303,6 +317,41 @@ export function usePharmacyStore() {
     const to = rx.patient.nurse ? ` · issued to ${rx.patient.nurse.name}, ${rx.patient.ward}` : '';
     log(short ? 'Partial' : 'Dispensed', `${rx.id} · ${what} · ${bill.no}${to}`);
     return bill;
+  }
+
+  /** A revised prescription after a clinical query: continue (prescriber aware) or stop the flagged medicines. */
+  function reviseRx(rxId: string, rev: Revision) {
+    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, revision: rev, status: r.status === 'On hold' ? 'Reviewing' : r.status, note: r.status === 'On hold' ? undefined : r.note } : r)));
+    log('Rx revised', `${rxId} · ${rev.by} · ${rev.outcome === 'continue' ? 'continue' : 'stopped'} ${rev.productIds.map((id) => productById(id).generic).join(', ')}${rev.note ? ` · ${rev.note}` : ''}`);
+  }
+
+  /**
+   * Picked and checked: the patient goes to the billing counter to pay. The
+   * prescription waits in the queue (At billing) with its picks, so others can
+   * be served meanwhile; the medicines are given once it is paid.
+   */
+  function sendToBilling(rxId: string, picks: Picks, amount: number) {
+    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, status: 'At billing', billing: { picks, amount, at: new Date() } } : r)));
+    log('Sent to billing', `${rxId} · ${inr(amount)}`);
+    setActiveRx(null);
+    setFlash(`${rxId} sent to billing · ${inr(amount)}`);
+  }
+  /** Back from At billing to change the picks (nothing was paid). */
+  function cancelBilling(rxId: string) {
+    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, status: 'Reviewing', billing: undefined } : r)));
+  }
+
+  /** The prescriber confirmed a dose above the formulary maximum. */
+  function confirmDose(rxId: string, productId: string, by: string) {
+    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, doseConfirmed: [...new Set([...(r.doseConfirmed ?? []), productId])] } : r)));
+    const line = rxs.find((r) => r.id === rxId)?.lines.find((l) => l.productId === productId);
+    log('Dose confirmed', `${rxId} · ${productById(productId).generic} ${line ? `${line.dose} ${line.frequency}` : ''} · above formulary maximum · confirmed by ${by}`);
+  }
+
+  /** The Formulary page, optionally at one medicine's entry. */
+  function openFormulary(productId?: string) {
+    go('formulary');
+    if (productId) setFocusProduct(productId);
   }
 
   function hold(rxId: string, reason: string) {
@@ -319,6 +368,14 @@ export function usePharmacyStore() {
     setBatches((list) => list.map((x) => (ids.has(x.id) ? { ...x, quarantined: 'Expired' } : x)));
     for (const x of hit) log('Quarantined', `${productName(productById(productId))} · ${x.batchNo} · Expired`);
     return { batches: hit.length, qty: hit.reduce((n, x) => n + x.qty, 0), nos: hit.map((x) => x.batchNo) };
+  }
+
+  /** Closes out removed stock: back to the supplier (credit note) or sent for disposal. */
+  function closeBatch(batchId: string, c: Omit<Closure, 'at' | 'by'>) {
+    const bt = batches.find((x) => x.id === batchId)!;
+    const closure: Closure = { ...c, at: new Date(), by: USER.name };
+    setBatches((list) => list.map((x) => (x.id === batchId ? { ...x, closure } : x)));
+    log(c.kind === 'returned' ? 'Returned' : 'Disposed', `${productName(productById(bt.productId))} · ${bt.batchNo} · ${bt.qty} ${productById(bt.productId).unit} · ${c.party}${c.ref ? ` · ${c.ref}` : ''}`);
   }
 
   function quarantine(batchId: string, reason: string) {
@@ -359,7 +416,7 @@ export function usePharmacyStore() {
     const apply = () => {
       const r = parseHash(window.location.hash);
       const rx = r.rx ? rxsRef.current.find((x) => x.id === r.rx) : undefined;
-      const open = rx && (rx.status === 'New' || rx.status === 'Reviewing' || rx.status === 'On hold');
+      const open = rx && (rx.status === 'New' || rx.status === 'Reviewing' || rx.status === 'On hold' || rx.status === 'At billing');
       lastPage.current = pageOf({ ...r, rx: open ? r.rx : null });
       setSectionState(r.section);
       setActiveRx(open ? r.rx : null);
@@ -380,7 +437,7 @@ export function usePharmacyStore() {
   /** Everyone already on file, so a returning patient is found rather than registered twice. */
   const patients = [...new Map([...rxs.map((r) => r.patient), ...bills.map((b) => b.patient)].map((p) => [p.mrn, p])).values()];
 
-  const pending = rxs.filter((r) => r.status === 'New' || r.status === 'Reviewing' || r.status === 'On hold');
+  const pending = rxs.filter((r) => r.status === 'New' || r.status === 'Reviewing' || r.status === 'On hold' || r.status === 'At billing');
   const stockOf = (productId: string) =>
     batches.filter((x) => x.productId === productId && !x.quarantined && band(x) !== 'expired').reduce((n, x) => n + x.qty, 0);
 
@@ -389,8 +446,9 @@ export function usePharmacyStore() {
     activeRx, openRx, closeRx: () => setActiveRx(null),
     stockFilter, setStockFilter, stockLoc, setStockLoc, stockCats, setStockCats, stockMakers, setStockMakers,
     focusProduct, setFocusProduct, openProduct, openFromList, backToStock, stockReturn,
-    batches, stockOf, quarantine, removeExpired,
-    rxs, pending, dispense, hold,
+    batches, stockOf, quarantine, removeExpired, closeBatch,
+    rxs, pending, dispense, hold, reviseRx, confirmDose, sendToBilling, cancelBilling,
+    h1, openFormulary,
     orderSeed, startOrder,
     bills, focusBill, setFocusBill, openBill,
     entering, startEntry, cancelEntry: () => setEntering(false), addRx, patients,

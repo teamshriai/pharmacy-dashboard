@@ -77,9 +77,14 @@ src/
   procurement.ts    New order / Order more → Procurement Centre request
   Dashboard.tsx (with the prescription queue)  NewOrder.tsx  Todo.tsx
   NewRx.tsx (#/new)  Dispense.tsx  Billing.tsx  Stock.tsx (Inventory)
-  Reports.tsx  Patients.tsx
+  Reports.tsx (with the H1 register)  Patients.tsx  Formulary.tsx (#/formulary)
   Staff.tsx  Settings.tsx                         one file per screen
   charts.tsx        dashboard charts
+  clinical.ts       clinical review: past history + drug knowledge base (sample) → revised
+                    prescription before dispensing (ClinicalReview.tsx shows it)
+  formulary.ts      sample formulary in the NFI style: Schedule, NLEM, adult dose and
+                    maximum, Indian brands, storage, counselling; the dose check,
+                    brand → generic lookup and the norms the console applies
   assistant.ts      SHRI AI's answer engine: answers only from the console's own records
   AiChat.tsx        SHRI AI: floating button and chat panel (typed or spoken questions)
   voice.ts          offline voice input, shared by the chat and the To-do
@@ -106,13 +111,18 @@ This build is ready to host as a demo. Using it with real patients needs:
   as "Kumar · Pharmacist").
 - A proper GST invoice: GSTIN, drug licence number and pharmacy address on the
   PDF bill. The PDF also drops patient names written in non-Latin scripts.
-- A full drug-interaction database (see below).
+- A full drug-interaction database (see below), and the formulary checked
+  against NFI 2021, NLEM 2022 and the current schedules by a pharmacist.
 - The Procurement Centre deployed where the EC2 server can reach it.
 
 ## Notes
 
-- Allergy and interaction rules are samples (penicillin; clopidogrel with
+- The clinical review (steroid in diabetes, metformin in kidney disease, …), allergy and interaction rules are samples (penicillin; clopidogrel with
   omeprazole). Production use needs a full drug-interaction database.
+- The formulary (doses, maximums, brands, NLEM status, storage) and the
+  distributors are sample data written for the demo, in the style of the
+  National Formulary of India. Doses are for adults; there is no paediatric,
+  renal or weight-based dosing. NLEM ceiling prices are not checked.
 - New patient MRNs are generated locally; in a live system they come from
   registration, and IP numbers from admissions.
 - Manufacturer names are real companies used for a recognisable demo; which

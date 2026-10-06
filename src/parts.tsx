@@ -20,10 +20,11 @@ export function TypeBadge({ type }: { type: RxType }) {
   );
 }
 
-const STATUS_TONE: Record<RxStatus, 'info' | 'warn' | 'ok' | 'neutral'> = {
+const STATUS_TONE: Record<RxStatus, 'info' | 'warn' | 'ok' | 'neutral' | 'billing'> = {
   New: 'info',
   Reviewing: 'neutral',
   'On hold': 'warn',
+  'At billing': 'billing',
   Dispensed: 'ok',
   Partial: 'warn',
 };
@@ -31,6 +32,7 @@ const STATUS_ICON: Record<RxStatus, IconName> = {
   New: 'clipboard',
   Reviewing: 'search',
   'On hold': 'pause',
+  'At billing': 'receipt',
   Dispensed: 'checkCircle',
   Partial: 'alert',
 };

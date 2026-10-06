@@ -96,9 +96,7 @@ export function FootprintsChart({ times, today, onOpen }: { times: Date[]; today
 // ------------------------------------------------------------ today's report
 
 const METHODS: { key: Payment; label: string; cls: string }[] = [
-  { key: 'UPI', label: 'UPI', cls: 'upi' },
-  { key: 'Card', label: 'Card', cls: 'card' },
-  { key: 'Credit', label: 'Credit', cls: 'credit' },
+  { key: 'Billing counter', label: 'Billing counter', cls: 'upi' },
   { key: 'Account', label: 'Hospital bill', cls: 'account' },
 ];
 

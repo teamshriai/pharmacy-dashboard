@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Icon } from './design/Icon';
-import { LOCATIONS, PRODUCTS, band, inr, productById, productName } from './data';
+import { LOCATIONS, PRODUCTS, band, hhmm, inr, productById, productName } from './data';
+import { SCHEDULE_RULE } from './formulary';
 import { Empty } from './parts';
 import type { Store } from './store';
 import { saveBlob } from './download';
 
-type Tab = 'sales' | 'gst' | 'stock';
-const TABS: { key: Tab; label: string; icon: 'pill' | 'receipt' | 'layers' }[] = [
+type Tab = 'sales' | 'gst' | 'stock' | 'h1';
+const TABS: { key: Tab; label: string; icon: 'pill' | 'receipt' | 'layers' | 'book' }[] = [
   { key: 'sales', label: 'Sales by medicine', icon: 'pill' },
   { key: 'gst', label: 'GST summary', icon: 'receipt' },
   { key: 'stock', label: 'Stock value', icon: 'layers' },
+  { key: 'h1', label: 'H1 register', icon: 'book' },
 ];
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -48,7 +50,8 @@ export function Reports({ store }: { store: Store }) {
     items: new Set(store.batches.filter((b) => b.location === loc && b.qty > 0 && usable(b)).map((b) => b.productId)).size,
     units: store.batches.filter((b) => b.location === loc && usable(b)).reduce((n, b) => n + b.qty, 0),
     value: value((b) => b.location === loc && usable(b)),
-    lost: value((b) => b.location === loc && !usable(b)),
+    // Not usable but still on the premises; once returned or disposed it is gone.
+    lost: value((b) => b.location === loc && !usable(b) && !b.closure),
   }));
 
   const total = round(store.bills.reduce((n, b) => n + b.total, 0));
@@ -63,6 +66,7 @@ export function Reports({ store }: { store: Store }) {
   function exportTab() {
     if (tab === 'sales') downloadCsv('sales-by-medicine', [['Medicine', 'Qty', 'Amount', 'GST'], ...sales.map((s) => [productName(s.p), s.qty, s.amount, s.tax])]);
     else if (tab === 'gst') downloadCsv('gst-summary', [['GST rate', 'Taxable', 'GST', 'Total'], ...gst.map((g) => [`${g.rate}%`, g.taxable, g.tax, g.amount])]);
+    else if (tab === 'h1') downloadCsv('h1-register', [['Date', 'Time', 'Rx no.', 'Patient', 'MRN', 'Prescriber', 'Medicine', 'Batch', 'Qty', 'Dispensed by'], ...store.h1.map((e) => [e.at.toLocaleDateString('en-IN'), hhmm(e.at), e.rxId, e.patient, e.mrn, e.prescriber, productName(productById(e.productId)), e.batchNo, e.qty, e.by])]);
     else downloadCsv('stock-value', [['Location', 'Medicines', 'Units', 'Value (MRP)', 'Not usable'], ...stock.map((s) => [s.loc, s.items, s.units, s.value, s.lost])]);
   }
 
@@ -87,7 +91,7 @@ export function Reports({ store }: { store: Store }) {
               </button>
             ))}
           </div>
-          <button className="btn btn-secondary ph-small-btn" onClick={exportTab}>
+          <button className="btn btn-secondary ph-small-btn" onClick={exportTab} disabled={tab === 'h1' && store.h1.length === 0}>
             <span className="btn-ico"><Icon name="download" size={14} /></span>Download CSV
           </button>
         </div>
@@ -129,6 +133,35 @@ export function Reports({ store }: { store: Store }) {
           </table>
           </div>
         ))}
+
+        {tab === 'h1' && (
+          <>
+            <p className="ph-h1-rule"><Icon name="book" size={13} />{SCHEDULE_RULE.H1} Entries are made here automatically when an H1 medicine is dispensed.</p>
+            {store.h1.length === 0 ? (
+              <Empty icon="book" text={`No Schedule H1 medicine dispensed yet today (${PRODUCTS.filter((p) => p.schedule === 'H1').map((p) => p.generic).join(', ')}).`} />
+            ) : (
+              <div className="ph-table-wrap">
+                <table className="ph-table ph-report-table ph-h1-table">
+                  <thead><tr><th>Time</th><th>Rx no.</th><th>Patient</th><th>Prescriber</th><th>Medicine</th><th>Batch</th><th className="num">Qty</th><th>By</th></tr></thead>
+                  <tbody>
+                    {store.h1.map((e, i) => (
+                      <tr key={i}>
+                        <td data-label="Time">{hhmm(e.at)}</td>
+                        <td data-label="Rx no." className="mono">{e.rxId}</td>
+                        <td data-label="Patient">{e.patient}<span className="ph-muted"> · {e.mrn}</span></td>
+                        <td data-label="Prescriber">{e.prescriber}</td>
+                        <td data-label="Medicine">{productName(productById(e.productId))}</td>
+                        <td data-label="Batch" className="mono">{e.batchNo}</td>
+                        <td data-label="Qty" className="num">{e.qty}</td>
+                        <td data-label="By">{e.by}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
 
         {tab === 'stock' && (
           <div className="ph-table-wrap">

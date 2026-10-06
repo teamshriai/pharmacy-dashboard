@@ -32,7 +32,7 @@ export type Level = 'stop' | 'warn' | 'info';
 export interface Alert {
   id: string;
   level: Level;
-  icon: 'ban' | 'clock' | 'layers';
+  icon: 'ban' | 'clock' | 'layers' | 'package';
   text: string;
   action?: { label: string; kind: 'quarantine' | 'open' | 'order' | 'stock'; ref: string };
 }
@@ -85,6 +85,19 @@ export function detectAlerts(s: { batches: Batch[]; pending: Prescription[] }): 
         action: store > 0 ? { label: 'View', kind: 'stock', ref: p.id } : { label: 'Order', kind: 'order', ref: p.id },
       });
     }
+  }
+
+  // Removed from use but still on the premises: return it to the supplier or send it for disposal.
+  for (const b of s.batches) {
+    if (!b.quarantined || b.closure || b.qty === 0) continue;
+    const p = productById(b.productId);
+    out.push({
+      id: 'close-' + b.id,
+      level: 'info',
+      icon: 'package',
+      text: `${b.batchNo} ${p.generic}: ${b.qty} ${p.unit} removed from use · return or dispose`,
+      action: { label: 'Record', kind: 'stock', ref: p.id },
+    });
   }
 
   // Stock close to expiry: use it first.

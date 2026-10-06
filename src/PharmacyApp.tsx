@@ -13,6 +13,7 @@ import { Stock } from './Stock';
 import { Billing } from './Billing';
 import { NewRx } from './NewRx';
 import { Reports } from './Reports';
+import { Formulary } from './Formulary';
 import { Patients } from './Patients';
 import { Staff } from './Staff';
 import { Settings } from './Settings';
@@ -43,6 +44,7 @@ const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
   {
     head: 'Records',
     items: [
+      { key: 'formulary', label: 'Formulary', icon: 'book', hue: 'amber' },
       { key: 'reports', label: 'Reports', icon: 'chart', hue: 'indigo' },
       { key: 'patients', label: 'Patients', icon: 'users', hue: 'pink' },
       { key: 'staff', label: 'Staff', icon: 'badge', hue: 'green' },
@@ -58,11 +60,12 @@ const HINT: Record<Section | 'dispense' | 'entry', string> = {
   order: 'Order medicines from Procurement.',
   billing: 'Every bill and payment today.',
   stock: 'Every medicine: stock, category, maker and expiry.',
-  reports: "Today's sales, GST and stock value.",
+  formulary: 'Doses, brands, Schedules and norms for every medicine (sample).',
+  reports: "Today's sales, GST, stock value and the H1 register.",
   patients: 'Everyone served today.',
   staff: 'Who is on shift, and what they did today.',
   settings: 'Theme and turnaround targets.',
-  dispense: 'Check, pick, pay.',
+  dispense: 'Check, pick, give.',
   entry: 'Patient, medicines, review.',
 };
 
@@ -238,6 +241,8 @@ export default function PharmacyApp() {
             <Billing store={store} />
           ) : store.section === 'stock' ? (
             <Stock store={store} />
+          ) : store.section === 'formulary' ? (
+            <Formulary store={store} />
           ) : store.section === 'reports' ? (
             <Reports store={store} />
           ) : store.section === 'patients' ? (

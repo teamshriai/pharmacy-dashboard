@@ -10,10 +10,14 @@
  * retrieved records.
  */
 import { detectAlerts } from './alerts';
+import { KNOWLEDGE, clinicalReview, pastHistory } from './clinical';
+import { FORMULARY, NLEM_RULE, SCHEDULE_RULE } from './formulary';
 import {
   CATEGORIES,
   DISPENSE_FROM,
+  DISTRIBUTORS,
   STAFF,
+  USER,
   hhmm,
   onShift,
   PRODUCTS,
@@ -33,7 +37,7 @@ import {
   type Prescription,
 } from './data';
 
-export type SourceKind = 'medicine' | 'batch' | 'prescription' | 'bills' | 'rule' | 'order' | 'alert' | 'staff' | 'category';
+export type SourceKind = 'medicine' | 'batch' | 'prescription' | 'bills' | 'rule' | 'order' | 'alert' | 'staff' | 'category' | 'formulary' | 'stock';
 export interface Source {
   kind: SourceKind;
   /** Product id, prescription id or rule key: what a click opens. */
@@ -44,6 +48,10 @@ export interface Answer {
   lines: string[];
   sources: Source[];
   found: boolean;
+  /** Questions to offer as chips (after a greeting, or when nothing was found). */
+  suggest?: string[];
+  /** The question as it was read, when spelling was corrected ("tottal" → "total"). */
+  readAs?: string;
 }
 
 interface Doc extends Source {
@@ -81,9 +89,22 @@ const SYNONYMS: Record<string, string> = {
   allergy: 'allergy', allergic: 'allergy', allergies: 'allergy',
   interaction: 'interaction', interactions: 'interaction',
   stat: 'stat', emergency: 'stat',
-  make: 'maker', makes: 'maker', made: 'maker', maker: 'maker', makers: 'maker', manufacturer: 'maker', manufacturers: 'maker', manufactured: 'maker', company: 'maker', brand: 'maker',
-  supplier: 'maker', suppliers: 'maker', distributor: 'maker',
+  make: 'maker', makes: 'maker', made: 'maker', maker: 'maker', makers: 'maker', manufacturer: 'maker', manufacturers: 'maker', manufactured: 'maker', company: 'maker',
+  supplier: 'maker', suppliers: 'maker', distributor: 'maker', distributors: 'maker', wholesaler: 'maker', wholesalers: 'maker', delivers: 'maker', delivery: 'maker',
+  tablet: 'tab', tablets: 'tab', tab: 'tab', tabs: 'tab', pills: 'tab',
+  capsule: 'cap', capsules: 'cap', cap: 'cap', caps: 'cap',
+  vial: 'vial', vials: 'vial', injection: 'vial', injections: 'vial',
+  ampoule: 'amp', ampoules: 'amp', ampule: 'amp', ampules: 'amp', amp: 'amp', amps: 'amp',
+  bottle: 'bottle', bottles: 'bottle', infusion: 'bottle', infusions: 'bottle',
+  inhaler: 'inhaler', inhalers: 'inhaler', puffer: 'inhaler', puffers: 'inhaler',
+  total: 'total', totals: 'total', overall: 'total', altogether: 'total', whole: 'total', sum: 'total', everything: 'total',
+  brand: 'brand', brands: 'brand', branded: 'brand', trade: 'brand',
+  dose: 'dose', doses: 'dose', dosage: 'dose', dosing: 'dose', maximum: 'dose', max: 'dose', overdose: 'dose', often: 'dose',
+  formulary: 'formulary', nfi: 'formulary', monograph: 'formulary', counsel: 'formulary', counselling: 'formulary', counseling: 'formulary', storage: 'formulary',
+  nlem: 'nlem', essential: 'nlem', dpco: 'nlem', nppa: 'nlem', ceiling: 'nlem', controlled: 'nlem',
   reddys: 'reddy',
+  sugar: 'antidiabetic', steroids: 'steroid', steroid: 'steroid', safe: 'interaction', unsafe: 'interaction', contraindicated: 'interaction', contraindication: 'interaction', risk: 'interaction', risky: 'interaction', together: 'interaction',
+  history: 'history', condition: 'history', conditions: 'history', past: 'history', revised: 'revise', revise: 'revise', revision: 'revise',
 };
 
 /** Words that name a maker in a question: "Cipla", "Dr Reddy's", "Sun Pharma"; generic words are left out. */
@@ -102,6 +123,7 @@ interface State {
   makerFor: (productId: string) => Manufacturer;
   orders: Order[];
   audit: AuditEvent[];
+  rxs: Prescription[];
 }
 
 function buildIndex(s: State): Doc[] {
@@ -160,34 +182,37 @@ function buildIndex(s: State): Doc[] {
         `${r.lines.length} medicine${r.lines.length === 1 ? '' : 's'} (${r.lines.map((l) => productById(l.productId).generic).join(', ')}), ` +
         `${r.status.toLowerCase()}${r.stat ? ', STAT' : ''}.` +
         (pt.nurse ? ` ${pt.encounter === 'Emergency' ? 'Emergency' : 'Ward'} nurse ${pt.nurse.name}, ext ${pt.nurse.ext}.` : '') +
-        (pt.allergies.length ? ` Allergies: ${pt.allergies.join(', ')}.` : ''),
+        (pt.allergies.length ? ` Allergies: ${pt.allergies.join(', ')}.` : '') +
+        (() => {
+          const hist = pastHistory(r, s).conditions;
+          const open = clinicalReview(r, s).filter((f) => f.blocking);
+          return (hist.length ? ` History: ${hist.map((h) => h.name).join(', ')}.` : '') +
+            (open.length ? ` Clinical review: ${open.map((f) => `${productById(f.productId).generic}, ${f.rule.title.toLowerCase()}`).join('; ')}; the prescription does not mention it, so a revised prescription is needed before dispensing.` : '') +
+            (r.revision ? ` Revised prescription recorded by ${r.revision.by}.` : '');
+        })(),
       terms: [
         'pending', ...terms(`${pt.name} ${pt.mrn} ${pt.ipNo ?? ''} ${r.type}`),
         ...(pt.ward ? ['ward', ...terms(pt.ward)] : []), ...(pt.nurse ? ['nurse'] : []), ...(r.stat ? ['stat'] : []),
         ...(pt.allergies.length ? ['allergy'] : []),
+        ...((pt.conditions ?? []).length ? ['history', ...(pt.conditions ?? []).map((c) => (c.code === 'diabetes' ? 'antidiabetic' : c.code))] : []),
+        ...(clinicalReview(r, s).some((f) => f.blocking) ? ['interaction', 'revise'] : []),
       ],
       names: words(pt.name).filter((w) => w.length > 2 && w !== 'patient' && w !== 'emergency'),
     });
   }
 
   const paid = s.bills.filter((b) => b.status === 'Paid');
-  const by = (m: string) => paid.filter((b) => b.payment === m).reduce((n, b) => n + b.total, 0);
   const accounts = s.bills.filter((b) => b.status !== 'Paid');
   docs.push({
     kind: 'bills',
     ref: 'billing',
     label: `Today's bills (${s.bills.length})`,
     text:
-      `Today: ${s.bills.length} bills. Paid at the counter ${inr(paid.reduce((n, b) => n + b.total, 0))}` +
-      // Only the methods actually used.
-      (() => {
-        const parts = (['UPI', 'Card', 'Credit'] as const).filter((m) => by(m) > 0).map((m) => `${m} ${inr(by(m))}`);
-        return parts.length ? ` (${parts.join(', ')}). ` : '. ';
-      })() +
+      `Today: ${s.bills.length} bills. Paid at the billing counter ${inr(paid.reduce((n, b) => n + b.total, 0))}. ` +
       `Charged to hospital accounts ${inr(accounts.reduce((n, b) => n + b.total, 0))}` +
       (accounts.length ? ` (${accounts.map((b) => accountOf(b.patient)).join(', ')})` : '') +
       `. GST included ${inr(s.bills.reduce((n, b) => n + b.tax, 0))}.`,
-    terms: ['paid', 'gst', 'upi', 'card', 'credit', 'account', 'total'],
+    terms: ['paid', 'gst', 'account', 'total'],
     names: [],
   });
 
@@ -272,6 +297,104 @@ function buildIndex(s: State): Doc[] {
   ];
   for (const [ref, label, text, t] of rules) docs.push({ kind: 'rule', ref, label, text, terms: t, names: [] });
 
+  // The drug knowledge base behind the clinical review (sample).
+  const CLS_WORDS: Record<string, string[]> = {
+    steroid: ['steroid', 'prednisolone', 'dexamethasone', 'hydrocortisone'],
+    biguanide: ['metformin'],
+    insulin: ['insulin'],
+    'antiplatelet-clopidogrel': ['clopidogrel'],
+    'ppi-omeprazole': ['omeprazole'],
+  };
+  const COND_TERM: Record<string, string> = { diabetes: 'antidiabetic', hypertension: 'hypertension', ckd: 'ckd', asthma: 'asthma' };
+  for (const k of KNOWLEDGE) {
+    const drug = CLS_WORDS[k.cls] ?? [];
+    const other = k.withCls ? CLS_WORDS[k.withCls] ?? [] : [];
+    docs.push({
+      kind: 'rule',
+      ref: k.id,
+      label: k.title,
+      text: `${k.title}: ${k.why} ${k.level === 'revise' ? 'Needs a revised prescription before dispensing: ' : 'Review: '}${k.ask} (Sample drug knowledge base; check a current drug reference.)`,
+      terms: ['interaction', 'revise', ...drug, ...other, ...(k.condition ? [COND_TERM[k.condition], 'history'] : [])],
+      names: [...drug, ...other],
+    });
+  }
+
+  // The formulary (sample, in the style of the National Formulary of India).
+  const GENERIC_BRAND = new Set(['generic', 'hospital', 'supply', 'ampoules', 'human']);
+  for (const m of FORMULARY) {
+    const p = productById(m.productId);
+    const brands = m.brands.filter((b) => b.company !== 'Various');
+    docs.push({
+      kind: 'formulary',
+      ref: p.id,
+      label: `${p.generic} · formulary`,
+      text:
+        `${productName(p)} ${p.form} (${m.klass}), Schedule ${m.schedule}${m.nlem ? ', NLEM 2022 essential medicine (price controlled)' : ''}. ` +
+        `Adult dose: ${m.dose} ` +
+        (brands.length ? `Brands in India: ${brands.map((b) => `${b.name} (${b.company})`).join(', ')}; dispensed by generic name. ` : '') +
+        `Storage: ${m.storage} Tell the patient: ${m.counsel} (Sample formulary; verify against NFI 2021.)`,
+      terms: ['formulary', 'dose', 'brand', ...(m.nlem ? ['nlem'] : []), ...(m.schedule === 'H1' ? ['h1'] : []), ...terms(`${p.generic} ${m.klass}`)],
+      names: [...words(p.generic).filter((w) => w.length > 3), ...brands.flatMap((b) => words(b.name)).filter((w) => w.length > 3 && !GENERIC_BRAND.has(w))],
+    });
+  }
+  const nlem = FORMULARY.filter((m) => m.nlem).map((m) => productById(m.productId).generic);
+  docs.push({
+    kind: 'rule',
+    ref: 'nlem',
+    label: 'NLEM and price control',
+    text: `${NLEM_RULE} Here: ${nlem.join(', ')}.`,
+    terms: ['nlem', 'formulary', 'gst'],
+    names: [],
+  });
+  docs.push({
+    kind: 'rule',
+    ref: 'schedules',
+    label: 'Schedules H and H1',
+    text: `${SCHEDULE_RULE.H} ${SCHEDULE_RULE.H1}`,
+    terms: ['h1', 'formulary'],
+    names: [],
+  });
+
+  // Stock totals: by unit (tablets, vials …) and overall, usable stock in both locations.
+  const UNIT_NAME: Record<string, string> = { tab: 'tablets', cap: 'capsules', vial: 'vials', amp: 'ampoules', bottle: 'bottles', inhaler: 'inhalers' };
+  const units = [...new Set(PRODUCTS.map((p) => p.unit))];
+  const totals = units.map((u) => {
+    const meds = PRODUCTS.filter((p) => p.unit === u);
+    return { u, meds, n: meds.reduce((n, p) => n + s.stockOf(p.id), 0) };
+  });
+  const fmt = (n: number) => n.toLocaleString('en-IN');
+  for (const t of totals) {
+    docs.push({
+      kind: 'stock',
+      ref: t.u,
+      label: `All ${UNIT_NAME[t.u] ?? t.u}`,
+      text: `${fmt(t.n)} ${UNIT_NAME[t.u] ?? t.u} in stock in total, across ${t.meds.length} medicine${t.meds.length === 1 ? '' : 's'}: ${t.meds.map((p) => `${productName(p)} ${fmt(s.stockOf(p.id))}`).join(', ')}. Usable stock in the pharmacy and the store; expired and removed stock is not counted.`,
+      terms: ['total', 'stock', t.u],
+      names: [],
+    });
+  }
+  docs.push({
+    kind: 'stock',
+    ref: 'all',
+    label: 'Stock in total',
+    text: `In stock in total: ${totals.map((t) => `${fmt(t.n)} ${UNIT_NAME[t.u] ?? t.u}`).join(', ')}, across ${PRODUCTS.length} medicines. Usable stock in the pharmacy and the store; expired and removed stock is not counted.`,
+    terms: ['total', 'stock'],
+    names: [],
+  });
+
+  // Distributors (sample).
+  for (const d of DISTRIBUTORS) {
+    const meds = PRODUCTS.filter((p) => s.makerFor(p.id).supplier === d.name);
+    docs.push({
+      kind: 'rule',
+      ref: `dist-${d.name}`,
+      label: d.name,
+      text: `${d.name}, ${d.city} (sample distributor): delivers ${d.delivery.toLowerCase()}; ${d.coldChain ? 'can deliver 2–8 °C stock' : 'no cold-chain delivery'}. Supplies ${meds.length ? meds.map((p) => p.generic).join(', ') : 'nothing at present'}.`,
+      terms: ['maker', ...(d.coldChain ? ['cold'] : []), ...meds.flatMap((p) => terms(p.generic))],
+      names: words(d.name).filter((w) => w.length >= 3 && !['pharma', 'distributors', 'wholesale', 'drug', 'house'].includes(w)),
+    });
+  }
+
   return docs;
 }
 
@@ -298,12 +421,93 @@ function rank(docs: Doc[], q: string[]) {
 
 const toSource = ({ kind, ref, label }: Doc): Source => ({ kind, ref, label });
 
-export function ask(question: string, state: State): Answer {
-  const q = terms(question);
-  if (q.length === 0) {
-    return { lines: ['Ask about stock, expiry, waiting or served patients, bills, orders, staff, or a pharmacy rule.'], sources: [], found: false };
+const GREETING = new Set('hi hii hiii hai hello helo hello hey heya hiya namaste namaskar vanakkam good morning afternoon evening there ai shri sir madam'.split(' '));
+const THANKS = new Set('thanks thank thanku thankyou thx ty tq you very much ok okay fine great nice'.split(' '));
+const BYE = new Set('bye goodbye see later cya'.split(' '));
+const START = ['What needs action?', 'Which medicines are low?', 'How many tablets in total?', 'Who is waiting?', 'Dose of metformin'];
+
+/** Edit distance (insert, delete, change, swap neighbours), stopping early past `max`. */
+function distance(a: string, b: string, max: number) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const c = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
   }
+  return d[a.length][b.length];
+}
+
+/**
+ * Reads past typing slips: words run together ("tabletsare" → "tablets are")
+ * and small misspellings ("tottal" → "total", "metfromin" → "metformin"),
+ * matched against the words this console knows. Unknown words are kept.
+ */
+function correct(question: string, vocab: Set<string>) {
+  const fix = (w: string): string => {
+    if (vocab.has(w) || /\d/.test(w) || w.length < 4) return w;
+    const near = (x: string, max: number) => {
+      let best = '', bestD = max + 1;
+      for (const v of vocab) {
+        if (v.length < 3) continue;
+        const dd = distance(x, v, max);
+        if (dd < bestD) { best = v; bestD = dd; }
+      }
+      return { best, d: bestD };
+    };
+    // A one-letter slip first ("tottal" → "total").
+    const one = near(w, 1);
+    if (one.d <= 1) return one.best;
+    // Then words run together: a known first part and a known rest ("tabletsare", "therein").
+    for (let i = w.length - 2; i >= 2; i--) {
+      const a = w.slice(0, i), b = w.slice(i);
+      if (vocab.has(a) && vocab.has(b)) return `${a} ${b}`;
+    }
+    for (let i = w.length - 4; i >= 3; i--) {
+      const a = w.slice(0, i), b = near(w.slice(i), 1);
+      if (vocab.has(a) && b.d <= 1) return `${a} ${b.best}`;
+    }
+    // Then a bigger slip in a long word ("metfromin" → "metformin").
+    if (w.length >= 8) {
+      const two = near(w, 2);
+      if (two.d <= 2) return two.best;
+    }
+    return w;
+  };
+  const out = words(question).map(fix).join(' ');
+  return out;
+}
+
+export function ask(question: string, state: State): Answer {
+  const plain = words(question).map((w) => w.replace(/(.)\1{2,}/g, '$1$1'));
+  if (plain.length && plain.length <= 6) {
+    if (plain.every((w) => GREETING.has(w) || THANKS.has(w) || BYE.has(w)) && plain.some((w) => GREETING.has(w) && !['good', 'there', 'ai', 'shri', 'sir', 'madam'].includes(w)))
+      return { lines: [`Hello ${USER.name}! I answer from this console's records: stock, expiry, waiting and served patients, bills, orders, staff, doses and brands, and the pharmacy's rules.`, 'Try one of these:'], sources: [], found: true, suggest: START };
+    if (plain.every((w) => THANKS.has(w)) && plain.some((w) => w.startsWith('thank') || ['thx', 'ty', 'tq'].includes(w)))
+      return { lines: [`You're welcome, ${USER.name}.`], sources: [], found: true };
+    if (plain.every((w) => BYE.has(w) || THANKS.has(w)) && plain.some((w) => BYE.has(w)))
+      return { lines: [`Bye, ${USER.name}. The chat stays here when you need it.`], sources: [], found: true };
+  }
+
   const docs = buildIndex(state);
+  // Every word the console knows, for reading past typing slips.
+  const vocab = new Set<string>([...STOP, ...Object.keys(SYNONYMS), ...docs.flatMap((d) => [...d.terms, ...d.names, ...words(d.label)])]);
+  const fixed = correct(question, vocab);
+  const readAs = fixed !== words(question).join(' ') ? fixed : undefined;
+  const q = terms(fixed);
+  // "how many" / "how much" are stop words, but they mean "a count": keep that.
+  if (/\bhow (many|much)\b/.test(fixed)) q.push('__howmany');
+  if (q.length === 0 || (q.length === 1 && q[0] === '__howmany')) {
+    return { lines: ['Ask about stock, expiry, waiting or served patients, bills, orders, staff, doses and brands, or a pharmacy rule.'], sources: [], found: false, suggest: START };
+  }
+  const answer = answerFor(q, docs);
+  return readAs ? { ...answer, readAs } : answer;
+}
+
+function answerFor(q: string[], docs: Doc[]): Answer {
   const named = docs.filter((d) => d.names.some((w) => q.includes(w)));
   const has = (t: string) => q.includes(t);
 
@@ -316,7 +520,16 @@ export function ask(question: string, state: State): Answer {
 
   let picked: Doc[] = [];
   const only = (kind: SourceKind) => docs.filter((d) => d.kind === kind);
-  if (has('ordered')) picked = only('order');
+  const namedFm = named.filter((d) => d.kind === 'formulary');
+  const UNITS = ['tab', 'cap', 'vial', 'amp', 'bottle', 'inhaler'];
+  const unitAsked = UNITS.filter((u) => has(u));
+  const howMany = q.includes('__howmany');
+  if (!named.length && !has('paid') && !has('gst') && (unitAsked.length ? has('total') || has('stock') || howMany : has('total')))
+    picked = unitAsked.length ? docs.filter((d) => d.kind === 'stock' && unitAsked.includes(d.ref)) : docs.filter((d) => d.kind === 'stock' && d.ref === 'all');
+  else if ((has('dose') || has('brand') || has('formulary') || has('nlem')) && namedFm.length) picked = namedFm.slice(0, 3);
+  else if (has('nlem')) picked = docs.filter((d) => d.ref === 'nlem');
+  else if ((has('formulary') || has('dose') || has('brand')) && !named.length) picked = docs.filter((d) => d.ref === 'schedules' || d.ref === 'nlem');
+  else if (has('ordered')) picked = only('order');
   else if (has('action')) picked = only('alert');
   else if (has('staff') && !named.length) picked = only('staff');
   else if (has('served')) picked = docs.filter((d) => d.label.startsWith('Served today'));
@@ -343,9 +556,10 @@ export function ask(question: string, state: State): Answer {
 
   if (picked.length === 0) {
     return {
-      lines: ['I could not find that in this pharmacy’s records.', 'Try a medicine, patient or staff name, or words like stock, expiry, waiting, paid, ordered, needs action.'],
+      lines: ['I could not find that in this pharmacy’s records.', 'Try a medicine, patient or staff name, or words like stock, expiry, waiting, paid, ordered, needs action. For example:'],
       sources: [],
       found: false,
+      suggest: START,
     };
   }
   return { lines: picked.map((d) => d.text), sources: picked.map(toSource), found: true };
@@ -359,5 +573,8 @@ export const SUGGESTIONS = [
   'How much was paid today?',
   'What did we order?',
   'Who is on shift?',
+  'Is prednisolone safe for a diabetic?',
+  'Dose of metformin',
+  'What is Glycomet?',
   'Stock of ceftriaxone',
 ];

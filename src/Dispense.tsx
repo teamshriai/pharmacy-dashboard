@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './design/Icon';
 import {
-  COUNTER_PAYMENTS,
   DISPENSE_FROM,
   accountOf,
   allergyConflict,
@@ -15,30 +14,46 @@ import {
   productById,
   productName,
   type Bill,
-  type Payment,
   type Prescription,
 } from './data';
 import { byUrgency } from './Dashboard';
 import { Avatar, EncounterBadge, Expiry, NurseLine, Stat, TypeBadge } from './parts';
 import { TransactionReceipt } from './Receipt';
-import { PayPanel } from './Pay';
 import type { Picks, Store } from './store';
+import { clinicalReview, pastHistory, stoppedByRevision } from './clinical';
+import { ClinicalReview } from './ClinicalReview';
+import { ageNote, asNeededCap, doseCheck, monographOf, sameClass } from './formulary';
 
 type Check = { label: string; state: 'ok' | 'warn' | 'stop'; note?: string };
 
 const HOLD_REASONS = ['Query to prescriber', 'Awaiting stock', 'Patient not present'];
-const STEPS = ['Review', 'Pick', 'Pay', 'Receipt'];
-const PAY_ICON = { UPI: 'phone', Card: 'card', Credit: 'wallet' } as const;
+/** Outpatients pay at the hospital billing counter before the medicines are given; accounts are charged. */
+const STEPS_PAY = ['Review', 'Pick', 'Billing', 'Give'];
+const STEPS_ACCOUNT = ['Review', 'Pick', 'Give'];
 
 export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
   // Inpatients (including discharge) and emergency patients are billed to their account.
   const account = onAccount(rx.patient);
+  const STEPS = account ? STEPS_ACCOUNT : STEPS_PAY;
+  // Sent to the billing counter: the picks wait with the prescription until it is paid.
+  const atBilling = rx.status === 'At billing' && !!rx.billing;
 
   // Contraindicated lines are never allocated; everything else starts on FEFO.
+  // Allergy conflicts, and anything the prescriber stopped in a revised prescription.
   const blocked = useMemo(
-    () => new Set(rx.lines.filter((l) => allergyConflict(rx.patient, productById(l.productId))).map((l) => l.productId)),
+    () => new Set([...rx.lines.filter((l) => allergyConflict(rx.patient, productById(l.productId))).map((l) => l.productId), ...stoppedByRevision(rx)]),
     [rx]
   );
+  const stopped = new Set(stoppedByRevision(rx));
+  // Past history and the drug knowledge base: what the prescriber may not have considered.
+  const history = pastHistory(rx, store);
+  const findings = clinicalReview(rx, store);
+  const mustRevise = findings.some((f) => f.blocking);
+  // Formulary dose: above the usual adult maximum waits for the prescriber's confirmation.
+  const confirmedDose = new Set(rx.doseConfirmed ?? []);
+  const doses = rx.lines.filter((l) => !blocked.has(l.productId)).map(doseCheck);
+  const overDose = doses.filter((d) => d.level === 'over' && !confirmedDose.has(d.productId));
+  const doseOf = (pid: string) => doses.find((d) => d.productId === pid);
   // The FEFO split is taken once, when the prescription opens (the parent keys
   // this screen by prescription, so a different one gets a fresh split).
   const [auto] = useState<Picks>(() => {
@@ -47,13 +62,26 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
     return p;
   });
 
-  const [picks, setPicks] = useState<Picks>(auto);
+  const [picks, setPicks] = useState<Picks>(() => {
+    if (!rx.billing) return auto;
+    // Never more than is still on the batch.
+    const p: Picks = {};
+    for (const [pid, ps] of Object.entries(rx.billing.picks)) p[pid] = ps.map((x) => ({ ...x, qty: Math.min(x.qty, store.batches.find((b) => b.id === x.batchId)?.qty ?? 0) })).filter((x) => x.qty > 0);
+    return p;
+  });
+  // A medicine the prescriber stops later gives back its picked batches (not billed, not dispensed).
+  const stoppedKey = stoppedByRevision(rx).join(',');
+  useEffect(() => {
+    if (!stoppedKey) return;
+    setPicks((cur) => {
+      const next = { ...cur };
+      for (const id of stoppedKey.split(',')) next[id] = [];
+      return next;
+    });
+  }, [stoppedKey]);
   const [open, setOpen] = useState<string | null>(rx.lines[0]?.productId ?? null);
-  const [payment, setPayment] = useState<Payment>(account ? 'Account' : 'UPI');
-  const [verified, setVerified] = useState(false);
+  const [verified, setVerified] = useState(atBilling);
   const [holding, setHolding] = useState(false);
-  /** Waiting on the patient: QR shown for UPI, card machine for a card. */
-  const [paying, setPaying] = useState(false);
   const [done, setDone] = useState<{ bill: Bill; short: boolean; picks: Picks } | null>(null);
 
   const allocated = (pid: string) => (picks[pid] ?? []).reduce((n, p) => n + p.qty, 0);
@@ -61,6 +89,11 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
   const short = shortLines.length > 0 || blocked.size > 0;
   const warnings = interactions(rx.lines.filter((l) => !blocked.has(l.productId)));
   const dupes = rx.lines.length !== new Set(rx.lines.map((l) => l.productId)).size;
+  // Two medicines of a class not usually doubled (two acid suppressants, two statins).
+  const doubles = sameClass(rx.lines.filter((l) => !blocked.has(l.productId)).map((l) => l.productId));
+  // The formulary limits are for adults.
+  const age = ageNote(rx.patient.age);
+  const limited = doses.some((d) => d.level !== 'unknown');
 
   const billLines = rx.lines
     .filter((l) => allocated(l.productId) > 0)
@@ -79,14 +112,32 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
       ? { label: 'Allergy', state: 'stop', note: `${rx.patient.allergies.join(', ')} · conflicts with ${[...blocked].map((id) => productById(id).generic).join(', ')}` }
       : { label: 'Allergy', state: 'ok', note: rx.patient.allergies.length ? `${rx.patient.allergies.join(', ')} · no conflict` : 'None recorded' },
     warnings.length ? { label: 'Interaction', state: 'warn', note: warnings[0].note } : { label: 'Interaction', state: 'ok', note: 'None found' },
-    { label: 'Same medicine twice', state: dupes ? 'warn' : 'ok', note: dupes ? 'Listed more than once' : 'No' },
+    mustRevise
+      ? { label: 'Medical history', state: 'stop', note: `${findings.filter((f) => f.blocking).map((f) => `${productById(f.productId).generic} with ${f.rule.condition ?? 'another medicine'}`).join(', ')} · revised prescription needed` }
+      : findings.some((f) => !f.resolved && f.rule.condition)
+        ? { label: 'Medical history', state: 'warn', note: 'Prescriber noted the condition · review' }
+        : { label: 'Medical history', state: 'ok', note: history.conditions.length ? (rx.revision ? 'Revised prescription recorded' : 'No conflict found') : 'Nothing on record' },
+    overDose.length
+      ? { label: 'Formulary dose', state: 'stop', note: `${overDose.map((d) => `${productById(d.productId).generic}: ${d.text}`).join('; ')} · confirm with the prescriber` }
+      : doses.some((d) => d.level === 'over')
+        ? { label: 'Formulary dose', state: 'warn', note: 'Above the usual maximum · prescriber confirmed' }
+        : age?.level === 'child' && limited
+          ? { label: 'Formulary dose', state: 'warn', note: age.text }
+          : { label: 'Formulary dose', state: 'ok', note: limited ? `Within the formulary dose${age ? ` · ${age.text.toLowerCase()}` : ''}` : 'No fixed maximum to check' },
+    dupes
+      ? { label: 'Same medicine twice', state: 'warn', note: 'Listed more than once' }
+      : doubles.length
+        ? { label: 'Same medicine twice', state: 'warn', note: doubles.map((d) => `${d.productIds.map((id) => productById(id).generic).join(' and ')}: both ${d.klass.toLowerCase()} · check one is meant to replace the other`).join('; ') }
+        : { label: 'Same medicine twice', state: 'ok', note: 'No, and no two of the same class' },
     shortLines.length
       ? { label: 'Stock', state: 'warn', note: `Short on ${shortLines.map((l) => productById(l.productId).generic).join(', ')}` }
       : { label: 'Stock', state: 'ok', note: 'All lines allocated' },
   ];
 
-  const step = done ? STEPS.length : !verified ? 0 : billLines.length ? 2 : 1;
-  const canDispense = verified && billLines.length > 0;
+  const step = done ? STEPS.length : atBilling ? 2 : verified ? 1 : 0;
+  // A medicine that needs a revised prescription keeps the whole order waiting.
+  const canDispense = verified && billLines.length > 0 && !mustRevise && overDose.length === 0;
+  const waitingFor = mustRevise ? 'Waiting for the revised prescription' : overDose.length ? 'Confirm the dose with the prescriber first' : '';
 
   function setPick(pid: string, batchId: string, qty: number, cap: number, need: number) {
     setPicks((cur) => {
@@ -97,18 +148,9 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
     });
   }
 
-  function doDispense() {
-    setPaying(false);
-    setDone({ bill: store.dispense(rx.id, picks, short, payment), short, picks });
+  function give() {
+    setDone({ bill: store.dispense(rx.id, picks, short, account ? 'Account' : 'Billing counter'), short, picks });
   }
-
-  /** UPI and card are collected first; credit and hospital accounts dispense at once. */
-  const collects = !account && (payment === 'UPI' || payment === 'Card');
-  const actionLabel = account
-    ? 'Dispense · add to hospital bill'
-    : payment === 'Credit'
-      ? 'Dispense on credit'
-      : `${payment === 'UPI' ? 'Scan to pay' : 'Card payment'} · ${inr(total)}`;
 
   function nextRx() {
     const next = [...store.pending].filter((r) => r.id !== rx.id).sort(byUrgency)[0];
@@ -127,7 +169,7 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
         <span className="ph-rx-tags">{rx.stat && <Stat />}<TypeBadge type={rx.type} /></span>
         <ol className="ph-steps" aria-label="Progress">
           {STEPS.map((s, i) => (
-            <li key={s} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}>
+            <li key={s} data-step={s.toLowerCase()} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}>
               <span>{i < step ? <Icon name="checkCircle" size={13} /> : i + 1}</span>
               {s}
             </li>
@@ -139,7 +181,9 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
         <TransactionReceipt
           bill={done.bill}
           notes={
-            done.short && (
+            <>
+            <Counselling rx={rx} picks={done.picks} />
+            {done.short && (
               <ul className="ph-backorder">
                 {rx.lines.map((l) => {
                   const got = (done.picks[l.productId] ?? []).reduce((n, p) => n + p.qty, 0);
@@ -147,12 +191,13 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                   return (
                     <li key={l.productId}>
                       <Icon name={blocked.has(l.productId) ? 'ban' : 'clock'} size={13} />
-                      {productName(productById(l.productId))}: {blocked.has(l.productId) ? 'not given (allergy)' : `${l.qty - got} to give later`}
+                      {productName(productById(l.productId))}: {stopped.has(l.productId) ? 'not given (stopped by the prescriber)' : blocked.has(l.productId) ? 'not given (allergy)' : `${l.qty - got} to give later`}
                     </li>
                   );
                 })}
               </ul>
-            )
+            )}
+            </>
           }
           actions={
             <>
@@ -189,6 +234,31 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
               <div className="ph-allergy ph-allergy--none"><Icon name="checkCircle" size={14} /> No known allergies</div>
             )}
 
+            {/* Past history stands out: it is what the prescriber may have missed. */}
+            {history.conditions.length ? (
+              <div className={`ph-hist-box ${mustRevise ? 'is-stop' : ''}`} role="note" aria-label="Past history">
+                <h3 className="ph-hist-title"><Icon name="alert" size={15} />Past history</h3>
+                <ul className="ph-hist">
+                  {history.conditions.map((c) => {
+                    const involved = findings.some((f) => f.blocking && f.rule.condition === c.code);
+                    return (
+                      <li key={c.code} className={involved ? 'is-involved' : ''}>
+                        <strong>{c.name}</strong>
+                        <span>{c.from}</span>
+                        {involved && <em className="ph-hist-flag"><Icon name="ban" size={11} />Check with prescriber</em>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : (
+              <>
+                <h3 className="ph-sub">Past history</h3>
+                <p className="ph-muted">No conditions on record.</p>
+              </>
+            )}
+            {rx.diagnosis && <p className="ph-hist-dx"><em>Prescription reason</em>{rx.diagnosis}</p>}
+
             <h3 className="ph-sub">Safety checks</h3>
             <ul className="ph-checks">
               {checks.map((c) => (
@@ -205,6 +275,7 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
 
           {/* ---------- Medicines & batches ---------- */}
           <section className="card ph-card ph-meds">
+            <ClinicalReview store={store} rx={rx} findings={findings} />
             <h3 className="ph-sub">Medicines</h3>
             <ul className="ph-med-list">
               {rx.lines.map((l) => {
@@ -223,6 +294,9 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                 const isAuto = JSON.stringify(picks[p.id] ?? []) === JSON.stringify(auto[p.id] ?? []);
                 const warn = warnings.some((w) => w.a === p.cls || w.b === p.cls);
                 const state = isBlocked ? 'stop' : got < l.qty ? 'short' : 'ok';
+                const dose = doseOf(p.id);
+                const over = dose?.level === 'over';
+                const mono = monographOf(p.id);
 
                 return (
                   <li key={l.productId} className={`ph-med ph-med--${state} ${isOpen ? 'is-open' : ''}`}>
@@ -230,12 +304,13 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                       <span className="ph-med-icon"><Icon name={p.route === 'Oral' ? 'pill' : 'droplet'} size={16} /></span>
                       <span className="ph-med-name">
                         <strong>{productName(p)} {p.form}</strong>
-                        <span>{l.dose} · {l.frequency} · {l.duration}</span>
+                        <span>{l.dose} · {l.frequency} · {l.duration}{asNeededCap(l) ? ` · ${asNeededCap(l)}` : ''}</span>
                       </span>
                       <span className="ph-med-flags">
                         {p.schedule === 'H1' && <span className="ph-flag ph-flag--h1" title="Schedule H1: record in the H1 register">H1</span>}
                         {p.cold && <span className="ph-flag" title="Cold chain: 2–8 °C"><Icon name="snow" size={12} /></span>}
                         {warn && <span className="ph-flag ph-flag--warn" title="Interaction"><Icon name="alert" size={12} /></span>}
+                        {over && <span className={`ph-flag ${confirmedDose.has(p.id) ? '' : 'ph-flag--h1'}`} title={dose?.text}>Dose</span>}
                       </span>
                       <span className="ph-med-qty">
                         {isBlocked ? (
@@ -252,8 +327,34 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                       {!isBlocked && <span className="ph-chev"><Icon name="chevron" size={15} /></span>}
                     </button>
 
+                    {over && (
+                      <div className={`ph-dose-over ${confirmedDose.has(p.id) ? 'is-done' : ''}`} role={confirmedDose.has(p.id) ? undefined : 'alert'}>
+                        <Icon name={confirmedDose.has(p.id) ? 'checkCircle' : 'ban'} size={14} />
+                        <span>
+                          <strong>{confirmedDose.has(p.id) ? 'Dose confirmed by the prescriber' : 'Above the formulary dose'}</strong>
+                          {dose?.text}. {mono && <>Usual: {mono.dose}</>}
+                        </span>
+                        {!confirmedDose.has(p.id) && (
+                          <span className="ph-dose-actions">
+                            <button className="btn btn-secondary ph-small-btn" onClick={() => store.hold(rx.id, `Dose query: ${p.generic} ${l.dose} ${l.frequency}, above the formulary maximum`)}>
+                              <span className="btn-ico"><Icon name="pause" size={13} /></span>Hold: query dose
+                            </button>
+                            <button className="btn btn-primary ph-small-btn" onClick={() => store.confirmDose(rx.id, p.id, rx.doctor)}>
+                              <span className="btn-ico"><Icon name="phone" size={13} /></span>Confirmed with {rx.doctor}
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {isOpen && !isBlocked && (
                       <div className="ph-batches step-enter">
+                        {mono && (
+                          <p className="ph-fm-inline">
+                            <Icon name="book" size={12} />
+                            <span><strong>Formulary</strong> {mono.dose} <em>{mono.storage}</em></span>
+                          </p>
+                        )}
                         <div className="ph-batches-head">
                           <span className={`ph-fefo ${isAuto ? '' : 'is-manual'}`}>
                             <Icon name={isAuto ? 'checkCircle' : 'edit'} size={12} /> {isAuto ? 'Earliest expiry first' : 'Changed by you'}
@@ -280,6 +381,7 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                                   <td data-label="Pick" className="num">
                                     {ok ? (
                                       <input
+                                        disabled={atBilling}
                                         className="ph-pick"
                                         type="number"
                                         min={0}
@@ -308,7 +410,10 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                     )}
                     {isBlocked && (
                       <p className="ph-short ph-short--stop">
-                        <Icon name="ban" size={13} /> {rx.patient.allergies.join(', ')} allergy. Not dispensed; hold for the prescriber.
+                        <Icon name="ban" size={13} />{' '}
+                        {stopped.has(l.productId)
+                          ? 'Stopped by the prescriber in the revised prescription. Not dispensed.'
+                          : `${rx.patient.allergies.join(', ')} allergy. Not dispensed; hold for the prescriber.`}
                       </p>
                     )}
                   </li>
@@ -333,7 +438,6 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
               <div className="ph-net"><dt>Net</dt><dd>{inr(total)}</dd></div>
             </dl>
 
-            <h3 className="ph-sub">Payment</h3>
             {account ? (
               <p className="ph-ipbill">
                 <Icon name="hospital" size={14} />
@@ -343,44 +447,42 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
                 </span>
               </p>
             ) : (
-              !paying && <>
-                <div className="ph-seg ph-pay" role="radiogroup" aria-label="Payment mode">
-                  {COUNTER_PAYMENTS.map((m) => (
-                    <button key={m} role="radio" aria-checked={payment === m} className={payment === m ? 'is-on' : ''} onClick={() => setPayment(m)}>
-                      <Icon name={PAY_ICON[m]} size={14} />
-                      {m}
-                    </button>
-                  ))}
-                </div>
-                <p className="ph-muted ph-pay-note">Digital payments only. Cash is not accepted.</p>
-              </>
+              <p className="ph-ipbill ph-ipbill--counter">
+                <Icon name="receipt" size={14} />
+                <span>Patient pays at the billing counter</span>
+              </p>
             )}
 
-            {!paying && <label className={`ph-verify ${verified ? 'is-on' : ''}`}>
-              <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} />
-              <span className="ph-verify-box">{verified && <Icon name="checkCircle" size={14} />}</span>
+            {!atBilling && <label className={`ph-verify ${verified && !waitingFor ? 'is-on' : ''}`}>
+              <input type="checkbox" checked={verified && !waitingFor} onChange={(e) => setVerified(e.target.checked)} disabled={!!waitingFor} />
+              <span className="ph-verify-box">{verified && !waitingFor && <Icon name="checkCircle" size={14} />}</span>
               <span>
                 <strong>Checked</strong>
-                <span>{warnings.length ? 'Interaction checked · ' : ''}{rx.patient.mrn}</span>
+                <span>{waitingFor || `${warnings.length ? 'Interaction checked · ' : ''}${rx.patient.mrn}`}</span>
               </span>
             </label>}
 
-            {paying ? (
-              <PayPanel
-                method={payment as 'UPI' | 'Card'}
-                amount={total}
-                reference={rx.id}
-                onPaid={doDispense}
-                onCancel={() => setPaying(false)}
-              />
+            {account ? (
+              <button className="btn btn-primary ph-block" disabled={!canDispense} onClick={give}>
+                Dispense · add to hospital bill
+              </button>
+            ) : atBilling ? (
+              <div className="ph-at-billing" role="status">
+                <span className="ph-at-billing-head"><span className="ph-at-billing-dot" aria-hidden="true" />Waiting for payment</span>
+                <strong>{inr(rx.billing!.amount)}</strong>
+                <button className="btn btn-primary ph-block ph-btn-give" onClick={give} disabled={billLines.length === 0}>
+                  <span className="btn-ico"><Icon name="checkCircle" size={14} /></span>Paid · give medicines
+                </button>
+                <button className="btn-text" onClick={() => store.cancelBilling(rx.id)}>Change</button>
+              </div>
             ) : (
-              <button className="btn btn-primary ph-block" disabled={!canDispense} onClick={collects ? () => setPaying(true) : doDispense}>
-                {actionLabel}
+              <button className="btn btn-primary ph-block" disabled={!canDispense} onClick={() => store.sendToBilling(rx.id, picks, total)}>
+                <span className="btn-ico"><Icon name="receipt" size={14} /></span>Send to billing · {inr(total)}
               </button>
             )}
-            {short && billLines.length > 0 && !paying && <p className="ph-muted ph-partial-note">Some items are short. The rest is given later.</p>}
+            {short && billLines.length > 0 && <p className="ph-muted ph-partial-note">Some items are short. The rest is given later.</p>}
 
-            {paying ? null : holding ? (
+            {atBilling ? null : holding ? (
               <div className="ph-hold step-enter">
                 {HOLD_REASONS.map((r) => (
                   <button key={r} className="ph-hold-reason" onClick={() => store.hold(rx.id, r)}>
@@ -398,5 +500,34 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * What to tell the patient (or the ward nurse) about each medicine handed over,
+ * from the formulary: how to take it, the as-needed daily limit, and storage.
+ */
+function Counselling({ rx, picks }: { rx: Prescription; picks: Picks }) {
+  const given = rx.lines.filter((l) => (picks[l.productId] ?? []).some((p) => p.qty > 0));
+  const items = given.map((l) => ({ l, m: monographOf(l.productId) })).filter((x) => x.m);
+  if (!items.length) return null;
+  const nurse = rx.patient.nurse;
+  return (
+    <section className="ph-counsel" aria-label="Counselling">
+      <h3><Icon name="book" size={15} />{nurse ? `Hand-over to ${nurse.name}` : 'Tell the patient'}</h3>
+      <ul>
+        {items.map(({ l, m }) => {
+          const cap = asNeededCap(l);
+          return (
+            <li key={l.productId}>
+              <strong>{productName(productById(l.productId))}</strong>
+              <span className="ph-counsel-how">{l.dose} · {l.frequency}{l.duration && l.duration !== '—' ? ` · ${l.duration}` : ''}{cap ? ` · ${cap}` : ''}</span>
+              <span>{m!.counsel}</span>
+              <em><Icon name={productById(l.productId).cold ? 'snow' : 'layers'} size={11} />Store: {m!.storage}</em>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

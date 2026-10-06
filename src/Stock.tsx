@@ -3,11 +3,13 @@ import { Icon } from './design/Icon';
 import {
   CATEGORIES,
   COVER_DAYS,
+  DISPOSAL_AGENCIES,
   DISPENSE_FROM,
   LEAD_DAYS,
   LOCATIONS,
   MANUFACTURERS,
   PRODUCTS,
+  SUPPLIERS,
   SAFETY_DAYS,
   band,
   categoryLabel,
@@ -23,6 +25,7 @@ import {
 import { Empty, Expiry, StockGauge } from './parts';
 import { inCatalogue, oldPrice, packsFor, units } from './procurement';
 import type { StockFilter, Store } from './store';
+import { monographOf } from './formulary';
 
 const FILTERS: { key: StockFilter; label: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
   { key: 'all', label: 'All', icon: 'layers' },
@@ -101,7 +104,7 @@ function StockList({ store }: { store: Store }) {
       setNotice({
         icon: 'ban',
         title: `${productName(p)} · ${done.nos?.join(', ')} removed from use`,
-        text: `${done.qty} ${p.unit} expired. Keep it apart for return to the supplier or disposal.`,
+        text: `${done.qty} ${p.unit} expired. Keep it apart, then record the return or disposal on the medicine's page.`,
       });
     }
   }
@@ -131,12 +134,18 @@ function StockList({ store }: { store: Store }) {
             </button>
           ))}
         </div>
-        <div className="ph-seg" role="radiogroup" aria-label="Location">
-          {(['All', ...LOCATIONS] as const).map((l) => (
-            <button key={l} role="radio" aria-checked={loc === l} className={loc === l ? 'is-on' : ''} onClick={() => setLoc(l)}>
-              {l === 'All' ? 'All locations' : l}
-            </button>
-          ))}
+        <div className="ph-inv-tools">
+          {/* The same New order as on the Dashboard: several medicines in one Procurement request. */}
+          <button className="btn btn-primary ph-new-order" onClick={() => store.startOrder()}>
+            <span className="btn-ico"><Icon name="plus" size={16} /></span>New order
+          </button>
+          <div className="ph-seg" role="radiogroup" aria-label="Location">
+            {(['All', ...LOCATIONS] as const).map((l) => (
+              <button key={l} role="radio" aria-checked={loc === l} className={loc === l ? 'is-on' : ''} onClick={() => setLoc(l)}>
+                {l === 'All' ? 'All locations' : l}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -205,7 +214,7 @@ function StockList({ store }: { store: Store }) {
                       </span>
                     </td>
                     <td data-label="Next expiry">{soonest ? <Expiry batch={soonest} /> : '—'}</td>
-                    <td data-label="Status"><StatusChips low={low} expired={expired} expiring={expiring} ordered={store.onOrder(p.id)} /></td>
+                    <td data-label="Status"><StatusChips low={low} expired={expired} expiring={expiring} ordered={store.onOrder(p.id)} toClose={all.filter((b) => b.quarantined && !b.closure).length} /></td>
                     {/* The row opens the medicine; clicks and keys in this cell stay here. */}
                     <td data-label="" className="ph-act ph-cell-act" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                       <RowAction
@@ -387,14 +396,15 @@ function ProductCell({ p }: { p: Product }) {
   );
 }
 
-function StatusChips({ low, expired, expiring, ordered }: { low: boolean; expired: boolean; expiring: boolean; ordered: number }) {
+function StatusChips({ low, expired, expiring, ordered, toClose = 0 }: { low: boolean; expired: boolean; expiring: boolean; ordered: number; toClose?: number }) {
   return (
     <span className="ph-status-stack">
       {low && <span className="ph-status ph-status--warn"><Icon name="alert" size={12} />Low</span>}
       {expired && <span className="ph-status ph-status--danger"><Icon name="ban" size={12} />Expired</span>}
       {expiring && !expired && <span className="ph-status ph-status--warn"><Icon name="clock" size={12} />Expiring</span>}
       {ordered > 0 && <span className="ph-status ph-status--info"><Icon name="package" size={12} />On order</span>}
-      {!low && !expired && !expiring && !ordered && <span className="ph-status ph-status--ok"><Icon name="checkCircle" size={12} />Normal</span>}
+      {toClose > 0 && <span className="ph-status ph-status--warn" title="Removed from use, still here"><Icon name="package" size={12} />To return / dispose</span>}
+      {!low && !expired && !expiring && !ordered && !toClose && <span className="ph-status ph-status--ok"><Icon name="checkCircle" size={12} />Normal</span>}
     </span>
   );
 }
@@ -402,6 +412,8 @@ function StatusChips({ low, expired, expiring, ordered }: { low: boolean; expire
 /** One medicine: its figures, how the low-stock level is worked out, its batches, and Order more. */
 function ProductPage({ store, p }: { store: Store; p: Product }) {
   const [quarantining, setQuarantining] = useState<string | null>(null);
+  /** The removed batch whose return / disposal is being recorded. */
+  const [closing, setClosing] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ icon: 'ban' | 'checkCircle'; title: string; text: string } | null>(null);
   const [ordering, setOrdering] = useState(false);
 
@@ -430,6 +442,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
     { label: 'Lasts about', value: daysLeft === Infinity ? '—' : `${daysLeft} d`, sub: ordered ? `${ordered} on order` : 'at current sales', tone: daysLeft < COVER_DAYS ? 'warn' : '' },
   ];
 
+  const brands = monographOf(p.id)?.brands.filter((x) => x.company !== 'Various').map((x) => x.name).join(', ');
   return (
     <div className="ph-stack step-enter">
       <section className="card ph-card ph-prod-page">
@@ -437,14 +450,19 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
           <button className="btn-text ph-back" onClick={store.backToStock}>
             <Icon name="arrow" size={14} />Back to Inventory
           </button>
-          <button className="btn btn-primary ph-small-btn" onClick={() => setOrdering(true)} disabled={ordering}>
-            <span className="btn-ico"><Icon name="package" size={14} /></span>Order more
-          </button>
+          <span className="ph-prod-actions">
+            <button className="btn btn-secondary ph-small-btn" onClick={() => store.openFormulary(p.id)}>
+              <span className="btn-ico"><Icon name="book" size={14} /></span>Formulary
+            </button>
+            <button className="btn btn-primary ph-small-btn" onClick={() => setOrdering(true)} disabled={ordering}>
+              <span className="btn-ico"><Icon name="package" size={14} /></span>Order more
+            </button>
+          </span>
         </div>
 
         <div className="ph-prod-head" ref={head} tabIndex={-1} aria-label={`${productName(p)}, ${p.form}`}>
           <ProductCell p={p} />
-          <StatusChips low={low} expired={live.some((b) => band(b) === 'expired')} expiring={live.some((b) => band(b) === 'lt30' || band(b) === 'lt90')} ordered={ordered} />
+          <StatusChips low={low} expired={live.some((b) => band(b) === 'expired')} expiring={live.some((b) => band(b) === 'lt30' || band(b) === 'lt90')} ordered={ordered} toClose={batches.filter((b) => b.quarantined && !b.closure).length} />
         </div>
 
         {notice && (
@@ -489,6 +507,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
           <li><span>MRP</span>{inr(p.mrp)} / {p.unit}</li>
           <li><span>Maker</span>{maker.name}</li>
           <li><span>Supplier</span>{maker.supplier}</li>
+          {brands && <li><span>Brands</span>{brands}</li>}
         </ul>
         <p className="ph-sample-line">
           <Icon name="alert" size={12} />
@@ -510,7 +529,8 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
               </thead>
               <tbody>
                 {batches.map((b: Batch) => (
-                  <tr key={b.id} className={b.quarantined ? 'is-off' : ''}>
+                  <Fragment key={b.id}>
+                  <tr className={b.quarantined ? 'is-off' : ''}>
                     <td data-label="Batch" className="mono">{b.batchNo}</td>
                     <td data-label="Made">{monYr(b.mfg)}</td>
                     <td data-label="Expiry"><Expiry batch={b} /></td>
@@ -518,7 +538,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
                     <td data-label="Location">{b.location}</td>
                     <td data-label="" className="ph-batch-act ph-cell-act">
                       {b.quarantined ? (
-                        <span className="ph-status ph-status--danger"><Icon name="ban" size={12} />Removed from use · {b.quarantined}</span>
+                        <RemovedTrail b={b} unit={p.unit} closing={closing === b.id} onClose={() => setClosing(closing === b.id ? null : b.id)} />
                       ) : quarantining === b.id ? (
                         <span className="ph-reasons">
                           {REASONS.map((r) => (
@@ -543,6 +563,24 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
                       )}
                     </td>
                   </tr>
+                  {closing === b.id && (
+                    <tr className="ph-close-row">
+                      <td colSpan={6}>
+                        <CloseForm
+                          b={b}
+                          unit={p.unit}
+                          supplier={maker.supplier}
+                          onCancel={() => setClosing(null)}
+                          onSave={(c) => {
+                            store.closeBatch(b.id, c);
+                            setClosing(null);
+                            setNotice({ icon: 'checkCircle', title: `${b.batchNo} ${c.kind === 'returned' ? `returned to ${c.party}` : 'sent for disposal'}`, text: c.ref ? `Reference ${c.ref}.` : 'Recorded.' });
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -635,6 +673,97 @@ function OrderForm({ p, inStock, onOrder, onCancel, onPlace }: {
         <button type="button" className="btn-text" onClick={onCancel} disabled={sending}>Cancel</button>
         <button type="submit" className="btn btn-primary ph-small-btn" disabled={qty <= 0 || sending}>
           {sending ? 'Sending…' : 'Send to Procurement'}
+        </button>
+      </span>
+    </form>
+  );
+}
+
+/**
+ * Where a removed batch is: Expired (or Damaged / Recall) → Removed from use →
+ * Returned to the supplier or Sent for disposal. The last step is the one left
+ * to do until it is recorded.
+ */
+function RemovedTrail({ b, unit, closing, onClose }: { b: Batch; unit: string; closing: boolean; onClose: () => void }) {
+  const c = b.closure;
+  const at = (d: Date) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  return (
+    <span className="ph-trail">
+      <ol className="ph-trail-steps" aria-label="What happened to this batch">
+        <li className="is-done"><Icon name="checkCircle" size={11} />{b.quarantined}</li>
+        <li className="is-done"><Icon name="checkCircle" size={11} />Removed from use</li>
+        <li className={c ? 'is-done' : 'is-next'}>
+          <Icon name={c ? 'checkCircle' : 'clock'} size={11} />
+          {c ? (c.kind === 'returned' ? 'Returned' : 'Disposed') : 'Return or dispose'}
+        </li>
+      </ol>
+      {c ? (
+        <span className="ph-trail-done">
+          {c.kind === 'returned' ? `To ${c.party}` : c.party} · {c.ref || 'no reference'} · {at(c.at)} · {c.by}
+        </span>
+      ) : (
+        <button className="btn btn-secondary ph-small-btn" onClick={onClose} aria-expanded={closing}>
+          <span className="btn-ico"><Icon name="package" size={13} /></span>{closing ? 'Cancel' : `Return / dispose ${b.qty} ${unit}`}
+        </button>
+      )}
+    </span>
+  );
+}
+
+/** Records what happened to removed stock: back to the supplier for credit, or to a disposal agency. */
+function CloseForm({ b, unit, supplier, onCancel, onSave }: {
+  b: Batch;
+  unit: string;
+  supplier: string;
+  onCancel: () => void;
+  onSave: (c: { kind: 'returned' | 'disposed'; party: string; ref: string; note?: string }) => void;
+}) {
+  const [kind, setKind] = useState<'returned' | 'disposed'>(b.quarantined === 'Recall' || b.quarantined === 'Expired' ? 'returned' : 'disposed');
+  const [party, setParty] = useState(kind === 'returned' ? supplier : DISPOSAL_AGENCIES[0]);
+  const [ref, setRef] = useState('');
+  const [note, setNote] = useState('');
+  const choose = (k: 'returned' | 'disposed') => {
+    setKind(k);
+    setParty(k === 'returned' ? supplier : DISPOSAL_AGENCIES[0]);
+  };
+  return (
+    <form
+      className="ph-close-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ref.trim()) onSave({ kind, party, ref: ref.trim(), note: note.trim() || undefined });
+      }}
+    >
+      <span className="ph-close-title">
+        <strong>{b.batchNo}: {b.qty} {unit}</strong>
+        <em>removed from use · {b.quarantined}</em>
+      </span>
+      <div className="ph-close-kind" role="radiogroup" aria-label="What happened">
+        <button type="button" role="radio" aria-checked={kind === 'returned'} className={kind === 'returned' ? 'is-on' : ''} onClick={() => choose('returned')}>
+          <Icon name="package" size={14} />Returned to supplier
+        </button>
+        <button type="button" role="radio" aria-checked={kind === 'disposed'} className={kind === 'disposed' ? 'is-on' : ''} onClick={() => choose('disposed')}>
+          <Icon name="ban" size={14} />Sent for disposal
+        </button>
+      </div>
+      <label className="field">
+        <span className="field-label">{kind === 'returned' ? 'Supplier' : 'Disposed through'}</span>
+        <select className="field-input" value={party} onChange={(e) => setParty(e.target.value)}>
+          {(kind === 'returned' ? SUPPLIERS : DISPOSAL_AGENCIES).map((x) => <option key={x}>{x}</option>)}
+        </select>
+      </label>
+      <label className="field">
+        <span className="field-label">{kind === 'returned' ? 'Credit note no.' : 'Disposal / manifest no.'}<span className="field-required">*</span></span>
+        <input className="field-input mono" value={ref} onChange={(e) => setRef(e.target.value)} placeholder={kind === 'returned' ? 'e.g. CN-4471' : 'e.g. BMW-2026-118'} maxLength={40} />
+      </label>
+      <label className="field ph-close-note">
+        <span className="field-label">Note <em>(optional)</em></span>
+        <input className="field-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === 'returned' ? 'e.g. Collected by the supplier rep' : 'e.g. Witnessed by Priya Menon'} maxLength={120} />
+      </label>
+      <span className="ph-close-actions">
+        <button type="button" className="btn-text" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="btn btn-primary ph-small-btn" disabled={!ref.trim()}>
+          {kind === 'returned' ? 'Record return' : 'Record disposal'}
         </button>
       </span>
     </form>

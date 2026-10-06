@@ -7,7 +7,7 @@ const when = (d: Date) => `${d.toLocaleDateString('en-IN', { day: '2-digit', mon
 
 /** How the bill was settled, in words a patient would recognise. */
 export const methodOf = (b: Bill) =>
-  b.payment === 'Account' ? `Hospital account · ${accountOf(b.patient)}` : b.payment === 'Credit' ? 'Credit' : b.payment;
+  b.payment === 'Account' ? `Hospital account · ${accountOf(b.patient)}` : 'Paid at the billing counter';
 
 /**
  * The confirmation shown once a bill is settled: the outcome first, then the
@@ -33,10 +33,10 @@ export function TransactionReceipt({ bill, notes, actions }: { bill: Bill; notes
             <path className="success-tick" d="M5 12.5l4.5 4.5L19 7.5" />
           </svg>
         </div>
-        <h2 className="ph-txn-title">{paid ? 'Payment successful' : 'Transaction successful'}</h2>
+        <h2 className="ph-txn-title">Medicines given</h2>
         <p className="ph-txn-amount">{inr(bill.total)}</p>
         <p className="ph-muted">
-          {paid ? `Paid by ${bill.payment}` : `Charged to ${accountOf(p)} · paid at discharge`}
+          {paid ? 'Paid at the billing counter' : `Charged to ${accountOf(p)} · paid at discharge`}
         </p>
       </div>
 

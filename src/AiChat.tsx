@@ -24,6 +24,8 @@ const KIND_ICON: Record<SourceKind, Parameters<typeof Icon>[0]['name']> = {
   alert: 'alert',
   staff: 'badge',
   category: 'layers',
+  formulary: 'book',
+  stock: 'layers',
 };
 
 type Turn = { id: number; q: string; a: Answer; via: 'voice' | 'typed' };
@@ -68,6 +70,8 @@ export function AiChat({ store }: { store: Store }) {
     else if (s.kind === 'order') store.go('stock');
     else if (s.kind === 'alert') store.go('dashboard');
     else if (s.kind === 'staff') store.go('staff');
+    else if (s.kind === 'formulary') store.openFormulary(s.ref);
+    else if (s.kind === 'stock') store.go('stock', 'all');
     else if (s.kind === 'category') {
       store.go('stock', 'all');
       store.setStockCats([s.ref as Category]);
@@ -107,7 +111,7 @@ export function AiChat({ store }: { store: Store }) {
             <div className="ph-ai-msg is-ai">
               <span className="ph-ai-avatar" aria-hidden="true"><Icon name="sparkles" size={13} /></span>
               <div className="ph-ai-bubble">
-                <p>Hello {USER.name}. Ask me about stock, expiry, waiting or served patients, bills, orders, staff, or a pharmacy rule. You can type or tap the mic.</p>
+                <p>Hello {USER.name}. Ask me about stock, expiry, waiting or served patients, bills, orders, staff, doses and brands, or a pharmacy rule. You can type or tap the mic.</p>
                 {turns.length === 0 && (
                   <div className="ph-ai-suggest">
                     {SUGGESTIONS.map((s) => (
@@ -129,7 +133,13 @@ export function AiChat({ store }: { store: Store }) {
                 <div className="ph-ai-msg is-ai">
                   <span className="ph-ai-avatar" aria-hidden="true"><Icon name="sparkles" size={13} /></span>
                   <div className={`ph-ai-bubble ${t.a.found ? '' : 'is-none'}`}>
+                    {t.a.readAs && <p className="ph-ai-readas">Read as: “{t.a.readAs}”</p>}
                     {t.a.lines.map((l, i) => <p key={i}>{l}</p>)}
+                    {t.a.suggest && t === turns[turns.length - 1] && (
+                      <div className="ph-ai-suggest">
+                        {t.a.suggest.map((x) => <button key={x} onClick={() => run(x)}>{x}</button>)}
+                      </div>
+                    )}
                     {t.a.sources.length > 0 && (
                       <div className="ph-ai-sources">
                         <span>From</span>
