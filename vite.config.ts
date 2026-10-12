@@ -109,7 +109,8 @@ function voskWorker(): Plugin {
 // https://vite.dev/config/
 /**
  * The version shown in the app: package.json's version, the git commit it was
- * built from (with "+" when built from uncommitted changes), and the build date.
+ * built from (with "+" when built from uncommitted changes to tracked files; Vite's
+ * own temporary config file is untracked, so it does not count), and the build date.
  */
 const git = (cmd: string) => {
   try {
@@ -119,7 +120,7 @@ const git = (cmd: string) => {
   }
 }
 const APP_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
-const APP_COMMIT = (git('git rev-parse --short HEAD') || 'local') + (git('git status --porcelain') ? '+' : '')
+const APP_COMMIT = (git('git rev-parse --short HEAD') || 'local') + (git('git status --porcelain --untracked-files=no') ? '+' : '')
 const APP_BUILT = new Date().toISOString()
 
 export default defineConfig({
