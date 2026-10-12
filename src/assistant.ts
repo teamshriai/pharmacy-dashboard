@@ -327,7 +327,7 @@ function buildIndex(s: State): Doc[] {
     docs.push({
       kind: 'formulary',
       ref: p.id,
-      label: `${p.generic} · formulary`,
+      label: `${p.generic} · Category`,
       text:
         `${productName(p)} ${p.form} (${m.klass}), Schedule ${m.schedule}${m.nlem ? ', NLEM 2022 essential medicine (price controlled)' : ''}. ` +
         `Adult dose: ${m.dose} ` +

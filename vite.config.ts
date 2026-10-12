@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { defineConfig, type Plugin } from 'vite'
 import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { connect } from 'node:net'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
@@ -106,7 +107,27 @@ function voskWorker(): Plugin {
 }
 
 // https://vite.dev/config/
+/**
+ * The version shown in the app: package.json's version, the git commit it was
+ * built from (with "+" when built from uncommitted changes), and the build date.
+ */
+const git = (cmd: string) => {
+  try {
+    return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return ''
+  }
+}
+const APP_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
+const APP_COMMIT = (git('git rev-parse --short HEAD') || 'local') + (git('git status --porcelain') ? '+' : '')
+const APP_BUILT = new Date().toISOString()
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_COMMIT__: JSON.stringify(APP_COMMIT),
+    __APP_BUILT__: JSON.stringify(APP_BUILT),
+  },
   plugins: [react(), voskWorker(), procurementOffline(), ...(https ? [basicSsl()] : [])],
   // The console is served at /dev/pharmacy/ (see DEPLOY.md). Leading and trailing slashes
   // matter: without them the logo and the procurement link resolved to the wrong path.

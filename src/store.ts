@@ -246,6 +246,8 @@ export function usePharmacyStore() {
       return;
     }
     setSectionState('dashboard');
+    // Opened from New prescription: leave the entry behind.
+    setEntering(false);
     setActiveRx(id);
     setRxs((list) => list.map((r) => (r.id === id && r.status === 'New' ? { ...r, status: 'Reviewing' } : r)));
   }
@@ -336,10 +338,6 @@ export function usePharmacyStore() {
     setActiveRx(null);
     setFlash(`${rxId} sent to billing · ${inr(amount)}`);
   }
-  /** Back from At billing to change the picks (nothing was paid). */
-  function cancelBilling(rxId: string) {
-    setRxs((list) => list.map((r) => (r.id === rxId ? { ...r, status: 'Reviewing', billing: undefined } : r)));
-  }
 
   /** The prescriber confirmed a dose above the formulary maximum. */
   function confirmDose(rxId: string, productId: string, by: string) {
@@ -348,7 +346,7 @@ export function usePharmacyStore() {
     log('Dose confirmed', `${rxId} · ${productById(productId).generic} ${line ? `${line.dose} ${line.frequency}` : ''} · above formulary maximum · confirmed by ${by}`);
   }
 
-  /** The Formulary page, optionally at one medicine's entry. */
+  /** Category: its Diseases or Medicines view ('diseases' / 'medicines'), or one medicine's entry by id. */
   function openFormulary(productId?: string) {
     go('formulary');
     if (productId) setFocusProduct(productId);
@@ -447,7 +445,7 @@ export function usePharmacyStore() {
     stockFilter, setStockFilter, stockLoc, setStockLoc, stockCats, setStockCats, stockMakers, setStockMakers,
     focusProduct, setFocusProduct, openProduct, openFromList, backToStock, stockReturn,
     batches, stockOf, quarantine, removeExpired, closeBatch,
-    rxs, pending, dispense, hold, reviseRx, confirmDose, sendToBilling, cancelBilling,
+    rxs, pending, dispense, hold, reviseRx, confirmDose, sendToBilling,
     h1, openFormulary,
     orderSeed, startOrder,
     bills, focusBill, setFocusBill, openBill,

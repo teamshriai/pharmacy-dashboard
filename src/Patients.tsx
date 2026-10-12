@@ -21,6 +21,8 @@ export function Patients({ store }: { store: Store }) {
       const times = [...rxs.map((r) => r.time), ...bills.map((b) => b.at)].map((d) => d.getTime());
       return { p, open, bills, rxCount: rxs.length, billed: bills.reduce((n, b) => n + b.total, 0), last: new Date(Math.max(...times)) };
     })
+    // Served or waiting today; a regular patient seen only last month is found in New prescription instead.
+    .filter((r) => r.open.length > 0 || r.last.toDateString() === new Date().toDateString())
     .sort((a, z) => z.last.getTime() - a.last.getTime());
 
   const shown = rows.filter((r) => (enc === 'All' || r.p.encounter === enc) && (!term || `${r.p.name} ${r.p.mrn} ${r.p.ipNo ?? ''}`.toLowerCase().includes(term)));

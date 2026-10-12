@@ -29,6 +29,8 @@ const FILTERS: StockFilter[] = ['all', 'low', 'expiring', 'expired'];
 const SECTIONS: Section[] = ['dashboard', 'order', 'billing', 'stock', 'formulary', 'reports', 'patients', 'staff', 'settings'];
 /** Inventory lives at #/inventory; older #/stock and #/manufacturers links still open it. */
 const INVENTORY_ALIASES = ['inventory', 'stock', 'manufacturers'];
+/** Category (the formulary) lives at #/category; older #/formulary links still open it. */
+const CATEGORY_ALIASES = ['category', 'formulary'];
 
 export function parseHash(hash: string): Route {
   const r: Route = { section: 'dashboard', rx: null, entering: false, filter: 'all', loc: 'All', cats: [], makers: [], product: null, bill: null };
@@ -38,10 +40,11 @@ export function parseHash(hash: string): Route {
   if (head === 'dispense' && id) return { ...r, section: 'dashboard', rx: id };
   if (head === 'new' || (head === 'queue' && id === 'new')) return { ...r, section: 'dashboard', entering: true };
   if (INVENTORY_ALIASES.includes(head)) r.section = 'stock';
+  else if (CATEGORY_ALIASES.includes(head)) r.section = 'formulary';
   else if ((SECTIONS as string[]).includes(head)) r.section = head as Section;
   if (r.section === 'billing' && id) r.bill = id;
-  // #/formulary/met500 opens that medicine's entry.
-  if (r.section === 'formulary' && id && PRODUCTS.some((p) => p.id === id)) r.product = id;
+  // #/category/diseases and #/category/medicines are its two views; #/category/met500 opens one medicine.
+  if (r.section === 'formulary' && id && (id === 'diseases' || id === 'medicines' || PRODUCTS.some((p) => p.id === id))) r.product = id;
   if (r.section === 'stock') {
     // An unknown medicine id falls back to the list, and the address is corrected.
     if (id && PRODUCTS.some((p) => p.id === id)) r.product = id;
@@ -63,7 +66,7 @@ export function toHash(r: Route): string {
   switch (r.section) {
     case 'dashboard': return '#/';
     case 'billing': return r.bill ? `#/billing/${encodeURIComponent(r.bill)}` : '#/billing';
-    case 'formulary': return r.product ? `#/formulary/${encodeURIComponent(r.product)}` : '#/formulary';
+    case 'formulary': return r.product ? `#/category/${encodeURIComponent(r.product)}` : '#/category';
     case 'stock': {
       if (r.product) return `#/inventory/${encodeURIComponent(r.product)}`;
       const q = [
@@ -84,7 +87,7 @@ export const pageOf = (r: Route) =>
 
 const TITLES: Record<string, string> = {
   dashboard: 'Dashboard', order: 'New order', billing: 'Billing', stock: 'Inventory', new: 'New prescription',
-  formulary: 'Formulary', reports: 'Reports', patients: 'Patients', staff: 'Staff', settings: 'Settings',
+  formulary: 'Category', reports: 'Reports', patients: 'Patients', staff: 'Staff', settings: 'Settings',
 };
 const productTitle = (id: string) => {
   const p = PRODUCTS.find((x) => x.id === id);

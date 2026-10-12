@@ -225,6 +225,25 @@ export const FORMULARY: Monograph[] = [
 
 export const monographOf = (productId: string) => FORMULARY.find((m) => m.productId === productId);
 
+/**
+ * Diseases and conditions, and the medicines here used for each: the
+ * Category page's Disease dropdown. A medicine can serve more than one
+ * (prednisolone: inflammation and asthma). Sample grouping.
+ */
+export const DISEASES: { key: string; label: string; productIds: string[] }[] = [
+  { key: 'diabetes', label: 'Diabetes', productIds: ['met500', 'glm1', 'ins40'] },
+  { key: 'bp', label: 'High blood pressure', productIds: ['amd5', 'tel40'] },
+  { key: 'heart', label: 'Heart disease and cholesterol', productIds: ['atv20', 'asp75', 'clp75'] },
+  { key: 'infection', label: 'Infections', productIds: ['amc625', 'azi500', 'lev500', 'cef1g'] },
+  { key: 'acidity', label: 'Acidity, ulcers and vomiting', productIds: ['ome20', 'pan40iv', 'ond4'] },
+  { key: 'pain', label: 'Pain and fever', productIds: ['pcm500', 'dic50', 'pcm1g'] },
+  { key: 'asthma', label: 'Asthma and allergy', productIds: ['sal100', 'cet10', 'pred10'] },
+  { key: 'inflammation', label: 'Inflammation (steroids)', productIds: ['pred10', 'dex4'] },
+  { key: 'emergency', label: 'Emergency: cardiac arrest, anaphylaxis, slow heart', productIds: ['adr1', 'atr06'] },
+  { key: 'fluids', label: 'Dehydration and fluid loss', productIds: ['ns500'] },
+];
+export const diseasesOf = (productId: string) => DISEASES.filter((d) => d.productIds.includes(productId));
+
 /** Doses per day for a frequency code (null when it is "as needed", so only the single dose is checked). */
 const PER_DAY: Record<string, number | null> = {
   OD: 1, HS: 1, STAT: 1, BD: 2, BID: 2, TDS: 3, TID: 3, QID: 4, Q6H: 4, Q8H: 3, Q12H: 2, PRN: null, SOS: null,
@@ -341,7 +360,7 @@ export const NORMS: { key: string; title: string; text: string; where: string }[
     key: 'generic',
     title: 'Generic name first',
     text: 'Medicines are recorded and dispensed by generic name. Brands are listed so a prescription written by brand can be matched to the generic.',
-    where: 'Search a brand in the Formulary or New prescription',
+    where: 'Search a brand in Category or New prescription',
   },
   {
     key: 'dose',

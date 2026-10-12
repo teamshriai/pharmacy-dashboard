@@ -1,5 +1,7 @@
 /**
- * Formulary: every medicine this pharmacy stocks, described the way the Indian
+ * Category (the formulary), opened from the side menu in two views:
+ * Diseases (each disease with the medicines used for it) and Medicines
+ * (every medicine this pharmacy stocks, described the way the Indian
  * formulary does (class, Schedule, NLEM, dose, brands, storage, counselling),
  * the norms the console enforces, and the distributors it buys through.
  *
@@ -9,7 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './design/Icon';
 import { DISTRIBUTORS, PRODUCTS, productById, productName } from './data';
-import { FORMULARY, NLEM_RULE, NORMS, SCHEDULE_RULE, type Monograph } from './formulary';
+import { DISEASES, FORMULARY, NLEM_RULE, NORMS, SCHEDULE_RULE, diseasesOf, type Monograph } from './formulary';
 import { Empty } from './parts';
 import type { Store } from './store';
 
@@ -22,7 +24,10 @@ export function Formulary({ store }: { store: Store }) {
   const [tab, setTab] = useState<Tab>('medicines');
   const [q, setQ] = useState('');
   const [only, setOnly] = useState<Only>('all');
+  // The side menu picks the view: #/category/diseases, #/category/medicines, or one medicine by id.
   const focus = store.focusProduct;
+  const view = focus === 'diseases' ? 'diseases' : 'medicines';
+  const med = focus && FORMULARY.some((m) => m.productId === focus) ? focus : '';
 
   const term = q.trim().toLowerCase();
   const matchOf = (m: Monograph) => {
@@ -36,10 +41,10 @@ export function Formulary({ store }: { store: Store }) {
     const p = productById(m.productId);
     return only === 'all' || (only === 'H1' && m.schedule === 'H1') || (only === 'nlem' && m.nlem === true) || (only === 'cold' && !!p.cold);
   };
-  const shown = FORMULARY.filter((m) => keep(m) && matchOf(m).hit);
+  const shown = med ? FORMULARY.filter((m) => m.productId === med) : FORMULARY.filter((m) => keep(m) && matchOf(m).hit);
   const count = (o: Only) => FORMULARY.filter((m) => o === 'all' || (o === 'H1' && m.schedule === 'H1') || (o === 'nlem' && m.nlem === true) || (o === 'cold' && !!productById(m.productId).cold)).length;
 
-  // An entry opened by link (#/formulary/met500) is shown even if a filter would hide it.
+  // One medicine (dropdown, or a link such as #/category/met500): shown on its own, open.
   useEffect(() => {
     if (focus) {
       setTab('medicines');
@@ -47,6 +52,7 @@ export function Formulary({ store }: { store: Store }) {
       setQ('');
     }
   }, [focus]);
+
 
   return (
     <div className="ph-stack step-enter">
@@ -58,9 +64,10 @@ export function Formulary({ store }: { store: Store }) {
         </span>
       </p>
 
+      {view === 'diseases' ? <Diseases store={store} /> : (
       <section className="card ph-card">
         <div className="ph-queue-bar">
-          <div className="ph-chips" role="tablist" aria-label="Formulary">
+          <div className="ph-chips" role="tablist" aria-label="Category">
             {([
               ['medicines', 'Medicines', 'pill', FORMULARY.length],
               ['norms', 'Norms', 'scale', NORMS.length],
@@ -71,25 +78,32 @@ export function Formulary({ store }: { store: Store }) {
               </button>
             ))}
           </div>
-          {tab === 'medicines' && (
+          {tab === 'medicines' && !med && (
             <label className="ph-finder">
               <Icon name="search" size={14} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Generic, brand or class" aria-label="Find in the formulary" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Generic, brand or class" aria-label="Find a medicine or brand" />
             </label>
           )}
         </div>
 
         {tab === 'medicines' && (
           <>
-            <div className="ph-chips ph-fm-only" role="radiogroup" aria-label="Show">
+            {med && (
+              <p className="ph-fm-one">
+                <Icon name="pill" size={14} />Showing one medicine
+                <button className="btn-text" onClick={() => store.openFormulary('medicines')}>All medicines</button>
+                <button className="btn-text" onClick={() => store.openFormulary('diseases')}>Diseases</button>
+              </p>
+            )}
+            {!med && <div className="ph-chips ph-fm-only" role="radiogroup" aria-label="Show">
               {([['all', 'All'], ['H1', 'Schedule H1'], ['nlem', 'NLEM 2022'], ['cold', 'Cold chain']] as const).map(([k, label]) => (
                 <button key={k} role="radio" aria-checked={only === k} className={`ph-chip ${only === k ? 'ph-chip--on' : ''}`} onClick={() => setOnly(k)}>
                   {label}<span className="ph-chip-count">{count(k)}</span>
                 </button>
               ))}
-            </div>
+            </div>}
             {shown.length === 0 ? (
-              <Empty icon="book" text={term ? `Nothing in the formulary matches “${q.trim()}”.` : 'No medicines in this group.'} />
+              <Empty icon="book" text={term ? `No medicine or brand matches “${q.trim()}”.` : 'No medicines in this group.'} />
             ) : (
               <ul className="ph-fm-list">
                 {shown.map((m) => (
@@ -114,6 +128,7 @@ export function Formulary({ store }: { store: Store }) {
 
         {tab === 'distributors' && <Distributors store={store} />}
       </section>
+      )}
     </div>
   );
 }
@@ -138,6 +153,7 @@ function Entry({ store, m, brandHit, focused }: { store: Store; m: Monograph; br
         <span className="ph-fm-name">
           <strong>{productName(p)} {p.form}</strong>
           <span>{m.klass}{brandHit && <> · <em className="ph-fm-brandhit">brand {brandHit}</em></>}</span>
+          <span className="ph-fm-uses">Used for: {diseasesOf(m.productId).map((d) => d.label).join(', ')}</span>
         </span>
         <span className="ph-fm-tags">
           <span className={`ph-fm-sch ph-fm-sch--${m.schedule.toLowerCase()}`} title={SCHEDULE_RULE[m.schedule]}>{m.schedule === 'OTC' ? 'OTC' : `Sch ${m.schedule}`}</span>
@@ -250,5 +266,40 @@ function Distributors({ store }: { store: Store }) {
         Sample distributors. Which one supplies a medicine follows its maker, chosen in Inventory. Buy only from licensed wholesalers (Form 20B / 21B).
       </p>
     </>
+  );
+}
+
+/** Diseases view: each disease, and the medicines here used for it; a medicine opens its entry. */
+function Diseases({ store }: { store: Store }) {
+  return (
+    <section className="card ph-card" aria-label="Diseases">
+      <ul className="ph-dis-grid">
+        {DISEASES.map((d) => (
+          <li key={d.key} className="ph-dis">
+            <h3>
+              <span className="ph-dis-icon"><Icon name="heartPulse" size={15} /></span>
+              {d.label}
+              <span className="ph-chip-count">{d.productIds.length}</span>
+            </h3>
+            <ul>
+              {d.productIds.map((id) => {
+                const p = productById(id);
+                const m = FORMULARY.find((x) => x.productId === id);
+                return (
+                  <li key={id}>
+                    <button className="ph-dis-med" onClick={() => store.openFormulary(id)}>
+                      <Icon name={p.route === 'Oral' ? 'pill' : 'droplet'} size={13} />
+                      <span><strong>{productName(p)}</strong> {p.form}</span>
+                      {m && <span className={`ph-fm-sch ph-fm-sch--${m.schedule.toLowerCase()}`}>{m.schedule === 'OTC' ? 'OTC' : `Sch ${m.schedule}`}</span>}
+                      <span className="ph-dis-stock">{store.stockOf(id)} {p.unit}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

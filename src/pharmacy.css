@@ -4973,32 +4973,47 @@ button.ph-metric:hover {
 /* ==========================================================================
    Dispense: past history and clinical review (drug knowledge base)
    ========================================================================== */
+:root {
+  /* Past history: a pure, bright red, stronger than the theme's danger tone. */
+  --hist-red: #dc2626;
+}
+:root[data-theme='dark'] {
+  --hist-red: #f87171;
+}
 .ph-hist-box {
   margin: 14px 0 12px;
-  padding: 12px 12px 10px;
-  border: 2px solid var(--warn);
+  padding: 0 10px 10px;
+  overflow: hidden;
+  border: 3px solid var(--hist-red);
   border-radius: var(--radius-md);
-  background: var(--warn-soft);
-  box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--warn) 70%, transparent);
+  background: color-mix(in srgb, var(--hist-red) 16%, var(--surface-1));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hist-red) 18%, transparent), 0 10px 22px -10px color-mix(in srgb, var(--hist-red) 85%, transparent);
 }
+/* A condition the prescription conflicts with: the box also pulses. */
 .ph-hist-box.is-stop {
-  border-color: var(--danger);
-  background: var(--danger-soft);
-  box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--danger) 75%, transparent);
+  animation: ph-hist-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ph-hist-pulse {
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--hist-red) 28%, transparent), 0 10px 22px -10px color-mix(in srgb, var(--hist-red) 85%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-hist-box.is-stop { animation: none; }
 }
 .ph-hist-title {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 8px;
+  margin: 0 -10px 10px;
+  padding: 8px 12px;
+  background: var(--hist-red);
   font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--warn);
+  color: #fff;
 }
-.ph-hist-box.is-stop .ph-hist-title {
-  color: var(--danger);
+:root[data-theme='dark'] .ph-hist-title {
+  color: #1a0d0d;
 }
 .ph-hist {
   display: flex;
@@ -5036,7 +5051,7 @@ button.ph-metric:hover {
   margin-top: 3px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--danger);
+  background: var(--hist-red);
   font-size: 11px;
   font-style: normal;
   font-weight: 700;
@@ -6074,4 +6089,187 @@ tr.is-off .ph-trail {
   .ph-inv-tools .ph-new-order {
     width: 100%;
   }
+}
+
+.ph-fm-uses {
+  font-size: var(--text-2xs);
+  color: color-mix(in srgb, var(--tone-amber) 70%, var(--ink));
+}
+
+/* Side menu: Category opens a submenu (Diseases, Medicines) */
+.rail-chev {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--ink-subtle);
+  transition: transform 0.2s var(--ease);
+}
+.rail-chev.is-open {
+  transform: rotate(180deg);
+}
+.rail-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px 22px;
+  padding: 0 0 0 10px;
+  border-left: 2px solid color-mix(in srgb, var(--tone-amber) 35%, transparent);
+  list-style: none;
+}
+.rail-sub-item {
+  min-height: 36px;
+  font-size: var(--text-xs);
+}
+
+/* Category: one medicine shown; Diseases view */
+.ph-fm-one {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+.ph-fm-one svg {
+  color: var(--tone-amber);
+}
+.ph-dis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ph-dis {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-top: 3px solid var(--tone-amber);
+  border-radius: var(--radius-md);
+  background: var(--glass-fill-strong);
+}
+.ph-dis h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.ph-dis h3 .ph-chip-count {
+  margin-left: auto;
+}
+.ph-dis-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tone-amber) 15%, transparent);
+  color: var(--tone-amber);
+}
+.ph-dis ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ph-dis-med {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: var(--text-xs);
+  text-align: left;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.ph-dis-med:hover {
+  border-color: color-mix(in srgb, var(--tone-amber) 45%, transparent);
+  background: color-mix(in srgb, var(--tone-amber) 8%, transparent);
+}
+.ph-dis-med > svg {
+  flex: none;
+  color: var(--tone-amber);
+}
+.ph-dis-med > span:nth-of-type(1) {
+  flex: 1;
+  min-width: 0;
+}
+.ph-dis-med strong {
+  color: var(--ink);
+}
+.ph-dis-stock {
+  font-size: var(--text-2xs);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* Past history: each condition marked in red (after the base .ph-hist li rule). */
+.ph-hist-box .ph-hist li {
+  border-left: 4px solid var(--hist-red);
+  border-radius: 4px 8px 8px 4px;
+}
+.ph-hist-box .ph-hist li strong {
+  color: var(--hist-red);
+}
+
+/* At billing: tick Paid, then Dispense (greyed out until Paid is ticked) */
+.ph-at-billing .ph-paid {
+  width: 100%;
+  text-align: left;
+  background: var(--surface-1);
+}
+.ph-at-billing .ph-paid.is-on {
+  background: var(--ok-soft);
+}
+.ph-at-billing-head.is-paid {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.ph-btn-give:disabled,
+.ph-btn-give:disabled:hover {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  box-shadow: none;
+  filter: none;
+  cursor: not-allowed;
+}
+
+/* Version: a chip in the top bar (always visible), and the full build at the foot of the side menu. */
+.ph-version-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--tone-blue) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone-blue) 8%, transparent);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--tone-blue);
+  cursor: default;
+}
+.side-version {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 6px 0 0;
+  padding: 0 12px;
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-subtle);
+}
+.side-version span {
+  opacity: 0.8;
 }

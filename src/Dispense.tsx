@@ -81,6 +81,8 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
   }, [stoppedKey]);
   const [open, setOpen] = useState<string | null>(rx.lines[0]?.productId ?? null);
   const [verified, setVerified] = useState(atBilling);
+  /** At billing: ticked once the patient shows the paid bill; Dispense then unlocks. */
+  const [paid, setPaid] = useState(false);
   const [holding, setHolding] = useState(false);
   const [done, setDone] = useState<{ bill: Bill; short: boolean; picks: Picks } | null>(null);
 
@@ -457,23 +459,33 @@ export function Dispense({ store, rx }: { store: Store; rx: Prescription }) {
               <input type="checkbox" checked={verified && !waitingFor} onChange={(e) => setVerified(e.target.checked)} disabled={!!waitingFor} />
               <span className="ph-verify-box">{verified && !waitingFor && <Icon name="checkCircle" size={14} />}</span>
               <span>
-                <strong>Checked</strong>
+                <strong>Verified</strong>
                 <span>{waitingFor || `${warnings.length ? 'Interaction checked · ' : ''}${rx.patient.mrn}`}</span>
               </span>
             </label>}
 
             {account ? (
               <button className="btn btn-primary ph-block" disabled={!canDispense} onClick={give}>
-                Dispense · add to hospital bill
+                Dispense · charge to account
               </button>
             ) : atBilling ? (
               <div className="ph-at-billing" role="status">
-                <span className="ph-at-billing-head"><span className="ph-at-billing-dot" aria-hidden="true" />Waiting for payment</span>
+                <span className={`ph-at-billing-head ${paid ? 'is-paid' : ''}`}>
+                  {paid ? <Icon name="checkCircle" size={14} /> : <span className="ph-at-billing-dot" aria-hidden="true" />}
+                  {paid ? 'Paid at the billing counter' : 'Waiting for payment'}
+                </span>
                 <strong>{inr(rx.billing!.amount)}</strong>
-                <button className="btn btn-primary ph-block ph-btn-give" onClick={give} disabled={billLines.length === 0}>
-                  <span className="btn-ico"><Icon name="checkCircle" size={14} /></span>Paid · give medicines
+                <label className={`ph-verify ph-paid ${paid ? 'is-on' : ''}`}>
+                  <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} />
+                  <span className="ph-verify-box">{paid && <Icon name="checkCircle" size={14} />}</span>
+                  <span>
+                    <strong>Paid</strong>
+                    <span>Patient showed the paid bill</span>
+                  </span>
+                </label>
+                <button className="btn btn-primary ph-block ph-btn-give" onClick={give} disabled={!paid || billLines.length === 0}>
+                  <span className="btn-ico"><Icon name="pill" size={14} /></span>Dispense
                 </button>
-                <button className="btn-text" onClick={() => store.cancelBilling(rx.id)}>Change</button>
               </div>
             ) : (
               <button className="btn btn-primary ph-block" disabled={!canDispense} onClick={() => store.sendToBilling(rx.id, picks, total)}>

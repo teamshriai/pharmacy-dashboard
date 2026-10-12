@@ -14,6 +14,7 @@ import { Billing } from './Billing';
 import { NewRx } from './NewRx';
 import { Reports } from './Reports';
 import { Formulary } from './Formulary';
+import { COMMIT, VERSION, builtText } from './version';
 import { Patients } from './Patients';
 import { Staff } from './Staff';
 import { Settings } from './Settings';
@@ -29,7 +30,16 @@ const LOGO = `${import.meta.env.BASE_URL}favicon-192.png`;
 
 /** Each destination owns one hue (DESIGN_SYSTEM.md §4.4), shown on its nav glyph. */
 type Hue = 'blue' | 'teal' | 'green' | 'amber' | 'orange' | 'pink' | 'indigo' | 'gray';
-type NavItem = { key: Section; label: string; icon: Parameters<typeof Icon>[0]['name']; hue: Hue };
+type NavItem = {
+  key: Section;
+  label: string;
+  icon: Parameters<typeof Icon>[0]['name'];
+  hue: Hue;
+  /** Kept out of the side menu; the page still opens from its address (#/patients). */
+  hidden?: boolean;
+  /** A submenu that opens under the item (Category: Diseases, Medicines). */
+  children?: { view: string; label: string; icon: Parameters<typeof Icon>[0]['name'] }[];
+};
 
 /** Daily work first, then records; Settings sits apart at the foot of the rail. */
 const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
@@ -44,9 +54,15 @@ const NAV_GROUPS: { head: string; items: NavItem[] }[] = [
   {
     head: 'Records',
     items: [
-      { key: 'formulary', label: 'Formulary', icon: 'book', hue: 'amber' },
+      {
+        key: 'formulary', label: 'Category', icon: 'book', hue: 'amber',
+        children: [
+          { view: 'diseases', label: 'Diseases', icon: 'heartPulse' },
+          { view: 'medicines', label: 'Medicines', icon: 'pill' },
+        ],
+      },
       { key: 'reports', label: 'Reports', icon: 'chart', hue: 'indigo' },
-      { key: 'patients', label: 'Patients', icon: 'users', hue: 'pink' },
+      { key: 'patients', label: 'Patients', icon: 'users', hue: 'pink', hidden: true },
       { key: 'staff', label: 'Staff', icon: 'badge', hue: 'green' },
     ],
   },
@@ -60,7 +76,7 @@ const HINT: Record<Section | 'dispense' | 'entry', string> = {
   order: 'Order medicines from Procurement.',
   billing: 'Every bill and payment today.',
   stock: 'Every medicine: stock, category, maker and expiry.',
-  formulary: 'Doses, brands, Schedules and norms for every medicine (sample).',
+  formulary: 'Medicines by disease: doses, brands, Schedules and norms (sample).',
   reports: "Today's sales, GST, stock value and the H1 register.",
   patients: 'Everyone served today.',
   staff: 'Who is on shift, and what they did today.',
@@ -160,14 +176,15 @@ export default function PharmacyApp() {
         <div
           id="side-drawer"
           className="side-drawer"
-          onClick={(e) => (e.target as HTMLElement).closest('.rail-item') && closeNav()}
+          // A submenu toggle (Category) opens its list; it does not close the phone drawer.
+          onClick={(e) => (e.target as HTMLElement).closest('.rail-item:not(.rail-toggle)') && closeNav()}
         >
           <nav className="rail" aria-label="Pharmacy">
             {NAV_GROUPS.map((g) => (
               <div key={g.head} className="rail-group">
                 <p className="rail-head">{g.head}</p>
                 <ol className="rail-list">
-                  {g.items.map((n) => <li key={n.key}><NavButton item={n} store={store} count={counts[n.key]} /></li>)}
+                  {g.items.filter((n) => !n.hidden).map((n) => <li key={n.key}>{n.children ? <NavGroup item={n} store={store} /> : <NavButton item={n} store={store} count={counts[n.key]} />}</li>)}
                 </ol>
               </div>
             ))}
@@ -179,6 +196,7 @@ export default function PharmacyApp() {
               <span className="side-dot" />
               Sample data
             </div>
+            <p className="side-version" title={`Build ${COMMIT} · built ${builtText}`}>Version {VERSION}</p>
           </div>
         </div>
       </aside>
@@ -195,6 +213,7 @@ export default function PharmacyApp() {
           <div className="top-actions">
             {/* The side menu's "Sample data" note is hidden once it collapses, so say it here. */}
             <span className="ph-sample-chip" title="Demonstration data only">Sample data</span>
+            <span className="ph-version-chip" title={`Version ${VERSION} · build ${COMMIT} · built ${builtText}`}>v{VERSION}</span>
             {/* Day / night switch (DESIGN_SYSTEM.md §6.3). */}
             <button
               type="button"
@@ -309,6 +328,46 @@ function NavButton({ item: n, store, count }: { item: NavItem; store: Store; cou
   );
 }
 
+/** A menu item with a submenu: a click opens or closes it; the sub-items go to the page's views. */
+function NavGroup({ item: n, store }: { item: NavItem; store: Store }) {
+  const here = store.section === n.key;
+  const [open, setOpen] = useState(here);
+  // Arriving on the page by any route (a link, search, Back) opens its submenu.
+  useEffect(() => {
+    if (here) setOpen(true);
+  }, [here]);
+  const view = store.focusProduct === 'diseases' ? 'diseases' : 'medicines';
+  const id = `sub-${n.key}`;
+  return (
+    <>
+      <button className={`rail-item rail-toggle ${here ? 'rail-item--active' : ''}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={id}>
+        <span className="rail-icon" style={{ '--hue': `var(--tone-${n.hue})` } as CSSProperties}>
+          <Icon name={n.icon} size={17} strokeWidth={here ? 2.2 : 1.8} />
+        </span>
+        <span className="rail-label">{n.label}</span>
+        <span className={`rail-chev ${open ? 'is-open' : ''}`}><Icon name="chevron" size={15} /></span>
+      </button>
+      {open && (
+        <ul className="rail-sub" id={id}>
+          {n.children!.map((c) => {
+            const on = here && view === c.view;
+            return (
+              <li key={c.view}>
+                <button className={`rail-item rail-sub-item ${on ? 'rail-item--active' : ''}`} onClick={() => store.openFormulary(c.view)} aria-current={on ? 'page' : undefined}>
+                  <span className="rail-icon" style={{ '--hue': `var(--tone-${n.hue})` } as CSSProperties}>
+                    <Icon name={c.icon} size={15} strokeWidth={on ? 2.2 : 1.8} />
+                  </span>
+                  <span className="rail-label">{c.label}{on && <span className="sr-only"> (current page)</span>}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
+
 /** The one search: patients, MRNs, prescription numbers and medicines. */
 function Search({ store }: { store: Store }) {
   const [q, setQ] = useState('');
@@ -345,7 +404,7 @@ function Search({ store }: { store: Store }) {
             else if (medHits[0]) pickMed(medHits[0].id);
           }
         }}
-        placeholder="Patient, MRN, Rx no. or medicine"
+        placeholder="Patient, MRN or Rx no."
         aria-label="Search"
       />
       {open && term && (

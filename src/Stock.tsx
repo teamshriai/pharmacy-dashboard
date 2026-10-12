@@ -452,7 +452,7 @@ function ProductPage({ store, p }: { store: Store; p: Product }) {
           </button>
           <span className="ph-prod-actions">
             <button className="btn btn-secondary ph-small-btn" onClick={() => store.openFormulary(p.id)}>
-              <span className="btn-ico"><Icon name="book" size={14} /></span>Formulary
+              <span className="btn-ico"><Icon name="book" size={14} /></span>Category
             </button>
             <button className="btn btn-primary ph-small-btn" onClick={() => setOrdering(true)} disabled={ordering}>
               <span className="btn-ico"><Icon name="package" size={14} /></span>Order more
